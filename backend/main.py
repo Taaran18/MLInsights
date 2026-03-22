@@ -5,13 +5,15 @@ from routers import upload, insights, cleaning, models, training, report
 
 app = FastAPI(title="MLInsights API", version="1.0.0")
 
-# Allow comma-separated origins via env var (e.g. Vercel URL + localhost)
+# Explicit origins from env var (comma-separated)
 _origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
 ALLOWED_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    # Also allow any Vercel preview/production URL — catches env var mismatches
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
