@@ -16,11 +16,11 @@ Upload any CSV or Excel dataset, explore it, clean it, train 30+ machine learnin
 
 ### Models Covered
 
-| Task | Models |
-| ---- | ------ |
+| Task               | Models                                                                                                                                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Classification** | Logistic Regression, Decision Tree, Random Forest, Gradient Boosting, HistGradient Boosting, XGBoost, LightGBM, CatBoost, SVM (RBF/Linear), KNN, Naive Bayes, LDA, MLP, Stacking, AdaBoost, Bagging, Extra Trees |
-| **Regression** | Linear, Ridge, Lasso, Elastic Net, Bayesian Ridge, Huber, Decision Tree, Random Forest, Gradient Boosting, XGBoost, LightGBM, CatBoost, SVR, KNN, MLP, Stacking |
-| **Clustering** | KMeans, DBSCAN, Agglomerative, Spectral, BIRCH, OPTICS |
+| **Regression**     | Linear, Ridge, Lasso, Elastic Net, Bayesian Ridge, Huber, Decision Tree, Random Forest, Gradient Boosting, XGBoost, LightGBM, CatBoost, SVR, KNN, MLP, Stacking                                                  |
+| **Clustering**     | KMeans, DBSCAN, Agglomerative, Spectral, BIRCH, OPTICS                                                                                                                                                           |
 
 ## Tech Stack
 
@@ -37,11 +37,6 @@ Upload any CSV or Excel dataset, explore it, clean it, train 30+ machine learnin
 - [pandas](https://pandas.pydata.org/) + [pyarrow](https://arrow.apache.org/docs/python/) — data I/O and session storage
 - [ReportLab](https://www.reportlab.com/) — PDF generation
 - [Uvicorn](https://www.uvicorn.org/) — ASGI server
-
-### Hosting
-
-- [Vercel](https://vercel.com/) — frontend
-- [Render](https://render.com/) — backend
 
 ## Project Structure
 
@@ -153,38 +148,6 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ALLOWED_ORIGINS=http://localhost:3000
 UPLOAD_DIR=backend/uploads
 ```
-
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `ALLOWED_ORIGINS` | Comma-separated allowed CORS origins | `http://localhost:3000` |
-| `UPLOAD_DIR` | Directory for session files | `backend/uploads/` |
-
-## Deployment
-
-### Backend → Render
-
-1. Push this repo to GitHub.
-2. Go to [render.com](https://render.com) → **New Web Service** → connect your repo.
-3. Render auto-detects `render.yaml` with these settings:
-   - **Root Directory:** `backend`
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
-4. In the Render dashboard **Environment** tab, set:
-   - `ALLOWED_ORIGINS` = `https://your-app.vercel.app,http://localhost:3000`
-   - `UPLOAD_DIR` is pre-set to `/tmp/mlinsights_uploads`
-   - `PYTHON_VERSION` = `3.11.9` (also set this in the dashboard if Render picks the wrong version)
-5. Copy the deployed URL (e.g. `https://mlinsights-api.onrender.com`).
-
-> **Note:** Render's free tier has an ephemeral filesystem. Sessions are lost on new deploys — expected for a demo/prototype.
-
-### Frontend → Vercel
-
-1. Go to [vercel.com](https://vercel.com) → **Add New Project** → import your repo.
-2. Set **Root Directory** to `frontend`.
-3. Add environment variable:
-   - `NEXT_PUBLIC_API_URL` = `https://mlinsights-api.onrender.com`
-4. Deploy. Vercel runs `npm run build` automatically.
-5. Go back to Render and add your Vercel URL to `ALLOWED_ORIGINS`.
 
 ## License
 
