@@ -7,12 +7,9 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
-      # Comma-separated list of allowed frontend origins
-      # Set this to your Vercel URL after deployment, e.g.:
-      #   https://mlinsights.vercel.app,http://localhost:3000
       - key: ALLOWED_ORIGINS
         sync: false
-
-      # Writable directory for session uploads on Render's ephemeral filesystem
       - key: UPLOAD_DIR
         value: /tmp/mlinsights_uploads
+      - key: PYTHON_VERSION
+        value: "3.11.9"
