@@ -5,57 +5,129 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatNumber(n: number | null | undefined, decimals = 4): string {
-  if (n == null) return "—";
-  return typeof n === "number" ? n.toFixed(decimals) : String(n);
+const integerFormat = new Intl.NumberFormat("en-US");
+const compactFormat = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+export function formatInteger(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  return integerFormat.format(value);
 }
 
-// Metrics stored as 0–1 ratios that are more readable as percentages
-const PCT_METRICS = new Set([
-  "Accuracy", "Precision", "Recall", "F1 Score", "ROC AUC", "CV Mean", "R2 Score",
-]);
-
-export function formatMetric(key: string, value: number | null | undefined): string {
-  if (value == null) return "—";
-  if (PCT_METRICS.has(key)) {
-    return `${(value * 100).toFixed(2)}%`;
-  }
-  return formatNumber(value);
+export function formatCompact(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  return Math.abs(value) < 10000
+    ? integerFormat.format(value)
+    : compactFormat.format(value);
 }
 
-export function isPercentMetric(key: string): boolean {
-  return PCT_METRICS.has(key);
+export function formatDecimal(
+  value: number | null | undefined,
+  digits = 4,
+): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  if (!Number.isFinite(value)) return value > 0 ? "∞" : "−∞";
+  const abs = Math.abs(value);
+  if (abs !== 0 && (abs >= 1e7 || abs < 1e-4)) return value.toExponential(2);
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: abs >= 1000 ? 2 : digits,
+  });
 }
 
-export function formatBytes(kb: number): string {
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
-  return `${(kb / 1024).toFixed(2)} MB`;
+export function formatPercent(
+  value: number | null | undefined,
+  digits = 1,
+): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  return `${value.toFixed(digits)}%`;
 }
 
-export const TASK_COLORS: Record<string, string> = {
-  regression: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  classification: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-  clustering: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-};
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
-export const CATEGORY_COLORS: Record<string, string> = {
-  "Linear": "bg-sky-500/10 text-sky-300",
-  "Linear / Regularized": "bg-sky-500/10 text-sky-300",
-  "Boosting": "bg-orange-500/10 text-orange-300",
-  "Ensemble / Bagging": "bg-emerald-500/10 text-emerald-300",
-  "Tree-based": "bg-green-500/10 text-green-300",
-  "Stacking": "bg-violet-500/10 text-violet-300",
-  "SVM": "bg-red-500/10 text-red-300",
-  "Instance-based": "bg-yellow-500/10 text-yellow-300",
-  "Naive Bayes": "bg-pink-500/10 text-pink-300",
-  "Bayesian": "bg-pink-500/10 text-pink-300",
-  "Probabilistic": "bg-fuchsia-500/10 text-fuchsia-300",
-  "Robust Linear": "bg-teal-500/10 text-teal-300",
-  "Neural Network (Shallow)": "bg-cyan-500/10 text-cyan-300",
-  "Discriminant Analysis": "bg-amber-500/10 text-amber-300",
-  "Centroid-based": "bg-indigo-500/10 text-indigo-300",
-  "Density-based": "bg-rose-500/10 text-rose-300",
-  "Hierarchical": "bg-lime-500/10 text-lime-300",
-  "Graph-based": "bg-purple-500/10 text-purple-300",
-  "Message Passing": "bg-orange-500/10 text-orange-300",
-};
+export function formatKilobytes(kb: number | null | undefined): string {
+  if (kb == null) return "—";
+  return formatBytes(kb * 1024);
+}
+
+export function formatDuration(ms: number | null | undefined): string {
+  if (ms == null) return "—";
+  if (ms < 1000) return `${Math.max(1, Math.round(ms))} ms`;
+  const seconds = ms / 1000;
+  if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 1 : 0)} s`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes} min ${Math.round(seconds % 60)} s`;
+}
+
+export function formatRelativeTime(
+  target: string | number | Date,
+  now = Date.now(),
+): string {
+  const time = new Date(target).getTime();
+  if (Number.isNaN(time)) return "—";
+  const diff = time - now;
+  const abs = Math.abs(diff);
+  const rtf = new Intl.RelativeTimeFormat("en-US", { numeric: "auto" });
+  if (abs < 60_000) return rtf.format(Math.round(diff / 1000), "second");
+  if (abs < 3_600_000) return rtf.format(Math.round(diff / 60_000), "minute");
+  if (abs < 86_400_000) return rtf.format(Math.round(diff / 3_600_000), "hour");
+  return rtf.format(Math.round(diff / 86_400_000), "day");
+}
+
+export function formatDateTime(value: string | number | Date): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function pluralize(
+  count: number,
+  singular: string,
+  plural = `${singular}s`,
+): string {
+  return `${formatInteger(count)} ${count === 1 ? singular : plural}`;
+}
+
+export function countLabel(
+  count: number,
+  singular: string,
+  plural = `${singular}s`,
+  compact = false,
+): string {
+  return `${compact ? formatCompact(count) : formatInteger(count)} ${count === 1 ? singular : plural}`;
+}
+
+export function truncateMiddle(text: string, max = 32): string {
+  if (text.length <= max) return text;
+  const keep = Math.floor((max - 1) / 2);
+  return `${text.slice(0, keep)}…${text.slice(text.length - keep)}`;
+}
+
+export function stripExtension(filename: string): string {
+  return filename.replace(/\.[^.]+$/, "") || filename;
+}
+
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      },
+      { once: true },
+    );
+  });
+}
