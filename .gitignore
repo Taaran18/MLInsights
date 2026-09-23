@@ -1,50 +1,52 @@
-# ── Python ────────────────────────────────────────────────────────────────────
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
-.eggs/
-.venv/
-venv/
-env/
-.env
-
-# ── Backend runtime data (never commit user uploads or trained models) ────────
-backend/uploads/
-backend/catboost_info/
-backend/models_store/
-*.pkl
-*.parquet
-
-# ── Environment variables ──────────────────────────────────────────────────────
 .env
 .env.local
+.env.prod
 .env.*.local
-backend/.env
+!.env.example
 
-# ── Node / Next.js ────────────────────────────────────────────────────────────
 node_modules/
 frontend/.next/
 frontend/out/
+frontend/build/
 frontend/.vercel/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# ── OS / Editor ───────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage/
+
+backend/uploads/
+backend/catboost_info/
+catboost_info/
+backend/models_store/
+*.pkl
+*.parquet
+*.zip
+
+AGENTS.md
+CLAUDE.md
+
 .DS_Store
 Thumbs.db
 *.log
-.idea/
-.vscode/
 *.swp
 *.swo
-
-# ── Misc ──────────────────────────────────────────────────────────────────────
-*.zip
-coverage/
-.coverage
-htmlcov/
-.pytest_cache/
+.idea/
+.vscode/
