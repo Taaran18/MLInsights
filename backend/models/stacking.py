@@ -1,4 +1,3 @@
-"""Stacking and Voting ensemble models."""
 from sklearn.ensemble import (
     StackingRegressor,
     StackingClassifier,

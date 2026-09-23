@@ -1,4 +1,3 @@
-"""Multi-Layer Perceptron (shallow neural network) models."""
 from sklearn.neural_network import MLPRegressor, MLPClassifier
 
 MODELS = {

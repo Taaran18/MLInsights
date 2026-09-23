@@ -1,14 +1,6 @@
-"""
-Central ML model registry.
-
-Aggregates models from individual files in backend/models/.
-Each file exposes a MODELS dict keyed by model_key.
-"""
 import sys
 import os
 
-# Ensure the backend/ root is on sys.path so `models.*` is resolvable
-# regardless of which directory uvicorn / the IDE resolves from.
 _BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _BACKEND_ROOT not in sys.path:
     sys.path.insert(0, _BACKEND_ROOT)
@@ -32,7 +24,6 @@ from models import (
     clustering,
 )
 
-# ── Build task-grouped registries ─────────────────────────────────────────
 
 REGRESSION_MODELS: dict = {}
 CLASSIFICATION_MODELS: dict = {}
@@ -74,10 +65,7 @@ ALL_MODELS = {
 }
 
 
-# ── Public helpers ────────────────────────────────────────────────────────
-
 def get_model_catalog() -> dict:
-    """Return serializable model catalog (no factory functions)."""
     catalog: dict = {}
     for task, models in ALL_MODELS.items():
         catalog[task] = [
@@ -93,7 +81,6 @@ def get_model_catalog() -> dict:
 
 
 def build_model(task: str, model_key: str):
-    """Instantiate a fresh model by task + key."""
     registry = ALL_MODELS.get(task, {})
     meta = registry.get(model_key)
     if not meta:
@@ -102,7 +89,6 @@ def build_model(task: str, model_key: str):
 
 
 def recommend_models(task: str, n_rows: int, n_cols: int) -> list:
-    """Return recommended model metadata for a given task and dataset size."""
     if task == "regression":
         if n_rows < 1000:
             keys = ["linear_regression", "ridge", "decision_tree_reg",
@@ -129,7 +115,7 @@ def recommend_models(task: str, n_rows: int, n_cols: int) -> list:
             keys = ["lgbm_clf", "xgboost_clf", "hist_gradient_boosting_clf",
                     "random_forest_clf", "logistic_regression", "sgd_classifier"]
 
-    else:  # clustering
+    else:
         if n_rows < 5_000:
             keys = ["kmeans", "dbscan", "agglomerative",
                     "gaussian_mixture", "spectral"]
@@ -146,5 +132,5 @@ def recommend_models(task: str, n_rows: int, n_cols: int) -> list:
             "description": registry[k]["description"],
         }
         for k in keys
-        if k in registry   # skip any that failed to import (e.g. blocked DLLs)
+        if k in registry
     ]

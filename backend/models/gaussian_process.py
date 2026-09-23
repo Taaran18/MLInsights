@@ -1,4 +1,3 @@
-"""Gaussian Process models."""
 from sklearn.gaussian_process import GaussianProcessRegressor, GaussianProcessClassifier
 
 MODELS = {

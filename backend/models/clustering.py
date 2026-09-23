@@ -1,17 +1,8 @@
-"""
-Clustering models.
-
-Some sklearn clustering extensions use compiled C extensions (_hierarchical_fast,
-_optics_inner, etc.) that may be blocked by Windows Application Control policies.
-Every problematic import is wrapped in try/except so the server still starts and
-all remaining models are available.
-"""
 from sklearn.cluster import KMeans, MiniBatchKMeans, DBSCAN, MeanShift
 from sklearn.mixture import GaussianMixture
 
 MODELS: dict = {}
 
-# ── Always-available models ────────────────────────────────────────────────
 
 MODELS["kmeans"] = {
     "name": "K-Means",
@@ -53,7 +44,6 @@ MODELS["gaussian_mixture"] = {
     "factory": lambda: GaussianMixture(n_components=3, random_state=42),
 }
 
-# ── Models backed by compiled C extensions (may be blocked by App Control) ─
 
 try:
     from sklearn.cluster import AgglomerativeClustering
@@ -65,7 +55,7 @@ try:
         "factory": lambda: AgglomerativeClustering(n_clusters=3),
     }
 except (ImportError, Exception):
-    pass  # _hierarchical_fast blocked or missing
+    pass
 
 try:
     from sklearn.cluster import Birch
@@ -77,7 +67,7 @@ try:
         "factory": lambda: Birch(n_clusters=3),
     }
 except (ImportError, Exception):
-    pass  # may share the same extension
+    pass
 
 try:
     from sklearn.cluster import SpectralClustering

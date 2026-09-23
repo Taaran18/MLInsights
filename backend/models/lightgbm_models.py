@@ -1,4 +1,3 @@
-"""LightGBM models."""
 try:
     from lightgbm import LGBMRegressor, LGBMClassifier
 

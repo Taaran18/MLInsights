@@ -1,4 +1,3 @@
-"""Support Vector Machine models."""
 from sklearn.svm import SVR, SVC, LinearSVR, LinearSVC, NuSVR, NuSVC
 
 MODELS = {

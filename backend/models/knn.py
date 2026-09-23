@@ -1,4 +1,3 @@
-"""K-Nearest Neighbors models."""
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 
 MODELS = {

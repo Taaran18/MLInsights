@@ -1,4 +1,3 @@
-"""XGBoost models."""
 try:
     from xgboost import XGBRegressor, XGBClassifier
 

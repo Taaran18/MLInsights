@@ -1,115 +1,125 @@
 import io
-import os
 import json
+import os
+import re
 import zipfile
-import joblib
-import pandas as pd
+from typing import Literal
+from urllib.parse import quote
+
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse, Response
-from utils.session_store import get_session, get_active_df, get_session_dir, get_meta_path
+from fastapi.responses import Response
+
+from routers.common import active_df, require_session
 from utils.data_utils import get_basic_info, get_missing_info
 from utils.report_gen import generate_report
+from utils.session_store import get_meta_path, get_session_dir
 
 router = APIRouter()
 
 
+def _base_name(filename: str) -> str:
+    return filename.rsplit(".", 1)[0] or "dataset"
+
+
+def _attachment(filename: str) -> dict:
+    ascii_name = re.sub(r"[^A-Za-z0-9._ -]", "_", filename) or "download"
+    return {
+        "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
+    }
+
+
 @router.get("/{session_id}/pdf")
 def download_pdf(session_id: str):
-    session = get_session(session_id)
-    if not session:
-        raise HTTPException(404, "Session not found.")
-
-    df = get_active_df(session_id)
-    basic = get_basic_info(df, session["filename"])
-    missing = get_missing_info(df)
-    trained = session.get("trained_models", {})
-
-    pdf_bytes = generate_report(session["filename"], basic, missing, trained)
-    filename = session["filename"].rsplit(".", 1)[0] + "_report.pdf"
-
+    session = require_session(session_id)
+    df = active_df(session)
+    pdf_bytes = generate_report(
+        session["filename"],
+        get_basic_info(df, session["filename"]),
+        get_missing_info(df),
+        session["trained_models"],
+        session["cleaned_df"] is not None,
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers=_attachment(f"{_base_name(session['filename'])}_report.pdf"),
     )
 
 
 @router.get("/{session_id}/dataset")
-def download_dataset(session_id: str, fmt: str = "csv"):
-    session = get_session(session_id)
-    if not session:
-        raise HTTPException(404, "Session not found.")
-
-    df = get_active_df(session_id)
-    base_name = session["filename"].rsplit(".", 1)[0]
+def download_dataset(session_id: str, fmt: Literal["csv", "xlsx"] = "csv"):
+    session = require_session(session_id)
+    df = active_df(session)
+    base = _base_name(session["filename"])
 
     if fmt == "xlsx":
-        buf = io.BytesIO()
-        df.to_excel(buf, index=False)
-        buf.seek(0)
+        buffer = io.BytesIO()
+        df.to_excel(buffer, index=False)
         return Response(
-            content=buf.read(),
+            content=buffer.getvalue(),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="{base_name}_cleaned.xlsx"'},
+            headers=_attachment(f"{base}_cleaned.xlsx"),
         )
-    else:
-        csv_str = df.to_csv(index=False)
-        return Response(
-            content=csv_str.encode("utf-8"),
-            media_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{base_name}_cleaned.csv"'},
-        )
+    return Response(
+        content=df.to_csv(index=False).encode("utf-8"),
+        media_type="text/csv",
+        headers=_attachment(f"{base}_cleaned.csv"),
+    )
 
 
 @router.get("/{session_id}/meta")
 def download_meta(session_id: str):
-    session = get_session(session_id)
-    if not session:
-        raise HTTPException(404, "Session not found.")
-
+    session = require_session(session_id)
     meta_path = get_meta_path(session_id)
     if not os.path.exists(meta_path):
-        raise HTTPException(404, "Meta file not found.")
-
+        raise HTTPException(404, "Session details weren't found. Upload your dataset again.")
     with open(meta_path, "r", encoding="utf-8") as f:
-        meta_content = f.read()
-
-    base_name = session["filename"].rsplit(".", 1)[0]
+        content = f.read()
     return Response(
-        content=meta_content.encode("utf-8"),
+        content=content.encode("utf-8"),
         media_type="application/json",
-        headers={"Content-Disposition": f'attachment; filename="{base_name}_meta.json"'},
+        headers=_attachment(f"{_base_name(session['filename'])}_meta.json"),
     )
 
 
 @router.get("/{session_id}/models_zip")
 def download_models_zip(session_id: str):
-    session = get_session(session_id)
-    if not session:
-        raise HTTPException(404, "Session not found.")
-
-    trained = session.get("trained_models", {})
+    session = require_session(session_id)
+    trained = session["trained_models"]
     if not trained:
-        raise HTTPException(400, "No trained models to download.")
+        raise HTTPException(400, "Train at least one model before downloading model files.")
 
     session_dir = get_session_dir(session_id)
-    buf = io.BytesIO()
-    count = 0
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for model_key, model_info in trained.items():
+    buffer = io.BytesIO()
+    manifest = []
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for model_key, info in trained.items():
             pkl_path = os.path.join(session_dir, f"{model_key}.pkl")
-            if os.path.exists(pkl_path):
-                friendly_name = model_info.get("name", model_key).replace(" ", "_")
-                zf.write(pkl_path, f"{friendly_name}.pkl")
-                count += 1
+            if not os.path.exists(pkl_path):
+                continue
+            archive_name = f"{re.sub(r'[^A-Za-z0-9._-]+', '_', info.get('name', model_key))}.pkl"
+            archive.write(pkl_path, archive_name)
+            manifest.append(
+                {
+                    "file": archive_name,
+                    "model_key": model_key,
+                    "model_name": info.get("name"),
+                    "task": info.get("task"),
+                    "target_column": info.get("target_col"),
+                    "feature_columns": info.get("feature_cols"),
+                    "class_labels": (info.get("metrics") or {}).get("class_labels"),
+                    "scaler": info.get("scaler_type"),
+                    "trained_at": info.get("trained_at"),
+                }
+            )
+        if manifest:
+            archive.writestr("manifest.json", json.dumps(manifest, indent=2))
 
-    if count == 0:
-        raise HTTPException(404, "No .pkl files found. Retrain your models to generate them.")
+    if not manifest:
+        raise HTTPException(404, "No model files were found. Train your models again to create them.")
 
-    buf.seek(0)
-    base_name = session["filename"].rsplit(".", 1)[0]
     return Response(
-        content=buf.read(),
+        content=buffer.getvalue(),
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{base_name}_models.zip"'},
+        headers=_attachment(f"{_base_name(session['filename'])}_models.zip"),
     )

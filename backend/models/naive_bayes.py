@@ -1,5 +1,6 @@
-"""Naive Bayes classifiers."""
 from sklearn.naive_bayes import GaussianNB, BernoulliNB, ComplementNB
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import MinMaxScaler
 
 MODELS = {
     "gaussian_nb": {
@@ -21,6 +22,6 @@ MODELS = {
         "category": "Naive Bayes",
         "description": "Improved version of Multinomial NB for imbalanced datasets.",
         "task": "classification",
-        "factory": lambda: ComplementNB(),
+        "factory": lambda: make_pipeline(MinMaxScaler(clip=True), ComplementNB()),
     },
 }

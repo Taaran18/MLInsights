@@ -1,4 +1,3 @@
-"""Gradient Boosting and AdaBoost models (sklearn native)."""
 from sklearn.ensemble import (
     GradientBoostingRegressor,
     GradientBoostingClassifier,

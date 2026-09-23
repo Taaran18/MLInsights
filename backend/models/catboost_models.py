@@ -1,4 +1,3 @@
-"""CatBoost models."""
 try:
     from catboost import CatBoostRegressor, CatBoostClassifier
 
@@ -8,14 +7,14 @@ try:
             "category": "Boosting",
             "description": "Gradient boosting on decision trees with native categorical support.",
             "task": "regression",
-            "factory": lambda: CatBoostRegressor(iterations=100, random_state=42, verbose=0),
+            "factory": lambda: CatBoostRegressor(iterations=100, random_state=42, verbose=0, allow_writing_files=False),
         },
         "catboost_clf": {
             "name": "CatBoost Classifier",
             "category": "Boosting",
             "description": "Gradient boosting with native categorical feature support.",
             "task": "classification",
-            "factory": lambda: CatBoostClassifier(iterations=100, random_state=42, verbose=0),
+            "factory": lambda: CatBoostClassifier(iterations=100, random_state=42, verbose=0, allow_writing_files=False),
         },
     }
 except ImportError:

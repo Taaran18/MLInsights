@@ -1,4 +1,3 @@
-"""Decision Tree models (single trees)."""
 from sklearn.tree import (
     DecisionTreeRegressor,
     DecisionTreeClassifier,

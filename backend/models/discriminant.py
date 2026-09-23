@@ -1,4 +1,3 @@
-"""Linear and Quadratic Discriminant Analysis classifiers."""
 from sklearn.discriminant_analysis import (
     LinearDiscriminantAnalysis,
     QuadraticDiscriminantAnalysis,

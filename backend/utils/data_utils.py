@@ -1,11 +1,9 @@
-"""Utilities for dataset analysis and cleaning."""
 import pandas as pd
 import numpy as np
 from typing import Any
 
 
 def get_basic_info(df: pd.DataFrame, filename: str) -> dict:
-    """Return shape, dtypes, memory usage."""
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
     datetime_cols = df.select_dtypes(include=["datetime"]).columns.tolist()
@@ -48,7 +46,6 @@ def get_missing_info(df: pd.DataFrame) -> dict:
     total = len(df)
     missing_per_col = {}
     for col in df.columns:
-        # Count NaN, None, empty strings, whitespace-only strings
         null_mask = df[col].isna()
         if df[col].dtype == object:
             empty_mask = df[col].astype(str).str.strip().eq("") | df[col].astype(str).str.lower().isin(
@@ -75,7 +72,7 @@ def get_missing_info(df: pd.DataFrame) -> dict:
 
 def get_value_counts(df: pd.DataFrame, col: str, top_n: int = 20) -> list:
     vc = df[col].value_counts(dropna=False).head(top_n)
-    return [{"value": str(k) if pd.isna(k) else k, "count": int(v)} for k, v in vc.items()]
+    return [{"value": None if pd.isna(k) else k, "count": int(v)} for k, v in vc.items()]
 
 
 def get_correlation(df: pd.DataFrame) -> dict:
@@ -87,18 +84,8 @@ def get_correlation(df: pd.DataFrame) -> dict:
 
 
 def clean_dataset(df: pd.DataFrame, options: dict) -> pd.DataFrame:
-    """
-    options keys:
-      - drop_duplicates: bool
-      - fill_numeric: "mean" | "median" | "zero" | None
-      - fill_categorical: "mode" | "unknown" | None
-      - drop_high_missing_cols: float (threshold 0-100, drop cols above this %)
-      - drop_high_missing_rows: float (threshold 0-100, drop rows above this %)
-      - normalize_empty_strings: bool (convert empty/whitespace to NaN first)
-    """
     result = df.copy()
 
-    # Normalize empty strings to NaN
     if options.get("normalize_empty_strings", True):
         for col in result.select_dtypes(include="object").columns:
             result[col] = result[col].astype(str).str.strip()
@@ -106,20 +93,17 @@ def clean_dataset(df: pd.DataFrame, options: dict) -> pd.DataFrame:
                 ["nan", "none", "null", "na", "n/a", "#n/a", "missing", "undefined", ""], np.nan
             )
 
-    # Drop cols with high missing %
     threshold_col = options.get("drop_high_missing_cols")
     if threshold_col is not None:
         missing_pct = result.isna().mean() * 100
         cols_to_drop = missing_pct[missing_pct > threshold_col].index.tolist()
         result = result.drop(columns=cols_to_drop)
 
-    # Drop rows with high missing %
     threshold_row = options.get("drop_high_missing_rows")
     if threshold_row is not None:
         row_missing_pct = result.isna().mean(axis=1) * 100
         result = result[row_missing_pct <= threshold_row]
 
-    # Fill numeric
     fill_num = options.get("fill_numeric")
     if fill_num:
         for col in result.select_dtypes(include=[np.number]).columns:
@@ -130,7 +114,6 @@ def clean_dataset(df: pd.DataFrame, options: dict) -> pd.DataFrame:
             elif fill_num == "zero":
                 result[col] = result[col].fillna(0)
 
-    # Fill categorical
     fill_cat = options.get("fill_categorical")
     if fill_cat:
         for col in result.select_dtypes(include=["object", "category"]).columns:
@@ -141,7 +124,6 @@ def clean_dataset(df: pd.DataFrame, options: dict) -> pd.DataFrame:
             elif fill_cat == "unknown":
                 result[col] = result[col].fillna("Unknown")
 
-    # Drop duplicates
     if options.get("drop_duplicates", False):
         result = result.drop_duplicates()
 
@@ -150,7 +132,6 @@ def clean_dataset(df: pd.DataFrame, options: dict) -> pd.DataFrame:
 
 
 def infer_task_type(df: pd.DataFrame, target_col: str) -> str:
-    """Infer regression, classification, or clustering."""
     if target_col not in df.columns:
         return "clustering"
     series = df[target_col].dropna()
@@ -163,7 +144,6 @@ def infer_task_type(df: pd.DataFrame, target_col: str) -> str:
 
 
 def safe_json(obj: Any) -> Any:
-    """Recursively convert numpy/pandas types to Python native for JSON serialization."""
     if obj is pd.NA or obj is pd.NaT:
         return None
     if isinstance(obj, dict):

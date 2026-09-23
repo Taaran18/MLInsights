@@ -1,82 +1,60 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional
-from utils.session_store import get_session, get_active_df, update_session
-from utils.data_utils import clean_dataset, get_basic_info, get_missing_info, safe_json
+from typing import Literal, Optional
+
+from fastapi import APIRouter
+from pydantic import BaseModel, Field
+
+from routers.common import require_session
+from utils.data_utils import clean_dataset, get_missing_info, safe_json
+from utils.session_store import update_session
 
 router = APIRouter()
 
 
 class CleanOptions(BaseModel):
     drop_duplicates: bool = True
-    fill_numeric: Optional[str] = "mean"       # "mean" | "median" | "zero" | None
-    fill_categorical: Optional[str] = "mode"   # "mode" | "unknown" | None
-    drop_high_missing_cols: Optional[float] = None   # percentage threshold
-    drop_high_missing_rows: Optional[float] = None   # percentage threshold
+    fill_numeric: Optional[Literal["mean", "median", "zero"]] = "mean"
+    fill_categorical: Optional[Literal["mode", "unknown"]] = "mode"
+    drop_high_missing_cols: Optional[float] = Field(None, ge=0, le=100)
+    drop_high_missing_rows: Optional[float] = Field(None, ge=0, le=100)
     normalize_empty_strings: bool = True
+
+
+def _impact(original, cleaned) -> dict:
+    return {
+        "before": {
+            "rows": int(original.shape[0]),
+            "columns": int(original.shape[1]),
+            "missing": get_missing_info(original)["total_missing"],
+        },
+        "after": {
+            "rows": int(cleaned.shape[0]),
+            "columns": int(cleaned.shape[1]),
+            "missing": get_missing_info(cleaned)["total_missing"],
+        },
+        "dropped_rows": int(original.shape[0] - cleaned.shape[0]),
+        "dropped_columns": [str(c) for c in original.columns if c not in cleaned.columns],
+    }
+
+
+@router.post("/{session_id}/preview")
+def preview(session_id: str, options: CleanOptions):
+    session = require_session(session_id)
+    original = session["df"]
+    cleaned = clean_dataset(original, options.model_dump())
+    return safe_json(_impact(original, cleaned))
 
 
 @router.post("/{session_id}/clean")
 def clean(session_id: str, options: CleanOptions):
-    session = get_session(session_id)
-    if not session:
-        raise HTTPException(404, "Session not found.")
-
-    df = session["df"]  # Always clean from original
-    cleaned = clean_dataset(df, options.model_dump())
+    session = require_session(session_id)
+    original = session["df"]
+    cleaned = clean_dataset(original, options.model_dump())
     update_session(session_id, cleaned_df=cleaned)
-
-    before_basic = get_basic_info(df, session["filename"])
-    after_basic = get_basic_info(cleaned, session["filename"])
-    after_missing = get_missing_info(cleaned)
-
-    return safe_json({
-        "message": "Dataset cleaned successfully.",
-        "before": {
-            "rows": before_basic["rows"],
-            "columns": before_basic["columns"],
-            "missing": get_missing_info(df)["total_missing"],
-        },
-        "after": {
-            "rows": after_basic["rows"],
-            "columns": after_basic["columns"],
-            "missing": after_missing["total_missing"],
-        },
-    })
+    return safe_json({"message": "Dataset cleaned.", **_impact(original, cleaned)})
 
 
 @router.post("/{session_id}/reset")
 def reset_cleaning(session_id: str):
-    session = get_session(session_id)
-    if not session:
-        raise HTTPException(404, "Session not found.")
+    require_session(session_id)
     update_session(session_id, cleaned_df=None)
-    return {"message": "Reverted to original dataset."}
-
-
-@router.get("/{session_id}/preview_clean")
-def preview_clean(session_id: str, drop_duplicates: bool = True,
-                  fill_numeric: Optional[str] = "mean",
-                  fill_categorical: Optional[str] = "mode",
-                  drop_high_missing_cols: Optional[float] = None,
-                  drop_high_missing_rows: Optional[float] = None):
-    session = get_session(session_id)
-    if not session:
-        raise HTTPException(404, "Session not found.")
-    df = session["df"]
-    options = {
-        "drop_duplicates": drop_duplicates,
-        "fill_numeric": fill_numeric,
-        "fill_categorical": fill_categorical,
-        "drop_high_missing_cols": drop_high_missing_cols,
-        "drop_high_missing_rows": drop_high_missing_rows,
-        "normalize_empty_strings": True,
-    }
-    cleaned = clean_dataset(df, options)
-    return safe_json({
-        "before_rows": len(df),
-        "after_rows": len(cleaned),
-        "before_missing": get_missing_info(df)["total_missing"],
-        "after_missing": get_missing_info(cleaned)["total_missing"],
-        "dropped_rows": len(df) - len(cleaned),
-    })
+    return {"message": "Reverted to the original dataset."}

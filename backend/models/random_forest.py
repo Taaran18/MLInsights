@@ -1,4 +1,3 @@
-"""Random Forest and Bagging ensemble models."""
 from sklearn.ensemble import (
     RandomForestRegressor,
     RandomForestClassifier,
