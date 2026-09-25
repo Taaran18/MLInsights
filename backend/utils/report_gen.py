@@ -16,7 +16,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-BRAND = colors.HexColor("#4f46e5")
+BRAND = colors.HexColor("#ea580c")
 MUTED = colors.HexColor("#475569")
 NON_METRIC_KEYS = {"confusion_matrix", "class_distribution", "class_labels"}
 PERCENT_METRICS = {"Accuracy", "Precision", "Recall", "F1 Score", "ROC AUC", "CV Mean", "R2 Score"}

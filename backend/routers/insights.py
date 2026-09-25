@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Query
 from routers.common import active_df, require_session
 from utils.data_utils import (
     get_basic_info,
+    get_column_profiles,
     get_correlation,
     get_describe,
     get_dtypes,
@@ -31,6 +32,12 @@ def overview(session_id: str):
             "trained_models": len(session["trained_models"]),
         }
     )
+
+
+@router.get("/{session_id}/profile")
+def profile(session_id: str):
+    df = active_df(require_session(session_id))
+    return safe_json(get_column_profiles(df))
 
 
 @router.get("/{session_id}/head")

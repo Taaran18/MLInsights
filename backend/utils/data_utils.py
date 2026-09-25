@@ -143,6 +143,76 @@ def infer_task_type(df: pd.DataFrame, target_col: str) -> str:
     return "classification"
 
 
+PROFILE_MAX_COLUMNS = 60
+PROFILE_BINS = 12
+
+
+def _column_kind(series: pd.Series) -> str:
+    if pd.api.types.is_bool_dtype(series):
+        return "boolean"
+    if pd.api.types.is_numeric_dtype(series):
+        return "number"
+    if pd.api.types.is_datetime64_any_dtype(series):
+        return "date"
+    return "text"
+
+
+def get_column_profiles(df: pd.DataFrame) -> dict:
+    rows = int(len(df))
+    profiles = []
+    for col in df.columns[:PROFILE_MAX_COLUMNS]:
+        series = df[col]
+        kind = _column_kind(series)
+        missing = int(series.isna().sum())
+        present = series.dropna()
+        profile = {
+            "name": str(col),
+            "kind": kind,
+            "dtype": str(series.dtype),
+            "missing": missing,
+            "missing_percentage": round(missing / rows * 100, 2) if rows else 0.0,
+            "unique": int(present.nunique()),
+        }
+        if kind == "number" and len(present):
+            values = pd.to_numeric(present, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna()
+            if len(values):
+                counts, edges = np.histogram(values.to_numpy(dtype=float), bins=PROFILE_BINS)
+                profile.update(
+                    {
+                        "min": float(values.min()),
+                        "max": float(values.max()),
+                        "mean": float(values.mean()),
+                        "median": float(values.median()),
+                        "histogram": counts.astype(int).tolist(),
+                        "bin_edges": [float(edge) for edge in edges],
+                    }
+                )
+        elif len(present):
+            top = present.astype(str).value_counts().head(4)
+            profile["top_values"] = [{"value": str(value), "count": int(count)} for value, count in top.items()]
+        profiles.append(profile)
+    total_cells = rows * df.shape[1]
+    missing_cells = int(df.isna().sum().sum())
+    duplicates = int(df.duplicated().sum())
+    completeness = 100.0 if not total_cells else round((1 - missing_cells / total_cells) * 100, 2)
+    uniqueness = 100.0 if not rows else round((1 - duplicates / rows) * 100, 2)
+    constant = sum(1 for p in profiles if p["unique"] <= 1)
+    consistency = 100.0 if not profiles else round((1 - constant / len(profiles)) * 100, 2)
+    return {
+        "rows": rows,
+        "columns": int(df.shape[1]),
+        "truncated": bool(df.shape[1] > PROFILE_MAX_COLUMNS),
+        "quality": {
+            "score": round(completeness * 0.5 + uniqueness * 0.3 + consistency * 0.2, 1),
+            "completeness": completeness,
+            "uniqueness": uniqueness,
+            "consistency": consistency,
+            "constant_columns": constant,
+        },
+        "profiles": profiles,
+    }
+
+
 def safe_json(obj: Any) -> Any:
     if obj is pd.NA or obj is pd.NaT:
         return None

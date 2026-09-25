@@ -106,6 +106,7 @@ def compare_models(session_id: str):
             "task": info.get("task"),
             "target_col": info.get("target_col"),
             "category": info.get("category"),
+            "duration_ms": info.get("duration_ms"),
         }
         for metric, value in info.get("metrics", {}).items():
             if metric not in NON_METRIC_KEYS and isinstance(value, (int, float)):
