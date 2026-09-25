@@ -15,6 +15,7 @@ import type {
   MissingResponse,
   ModelCatalog,
   Overview,
+  ProfileResponse,
   RecommendResponse,
   ResultsResponse,
   SessionSummary,
@@ -88,6 +89,11 @@ export const api = {
 
   describe: (sessionId: string, signal?: AbortSignal) =>
     request<DescribeResponse>(`/api/insights/${sid(sessionId)}/describe`, {
+      signal,
+    }),
+
+  profile: (sessionId: string, signal?: AbortSignal) =>
+    request<ProfileResponse>(`/api/insights/${sid(sessionId)}/profile`, {
       signal,
     }),
 
@@ -195,4 +201,6 @@ export const reportPaths = {
     `/api/report/${sid(sessionId)}/dataset?fmt=${format}`,
   meta: (sessionId: string) => `/api/report/${sid(sessionId)}/meta`,
   models: (sessionId: string) => `/api/report/${sid(sessionId)}/models_zip`,
+  bundle: (sessionId: string, format: "csv" | "xlsx") =>
+    `/api/report/${sid(sessionId)}/bundle?fmt=${format}`,
 };

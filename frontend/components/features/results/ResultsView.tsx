@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import {
   ArrowDown,
   ArrowUp,
+  BookOpen,
   BrainCircuit,
   Crown,
   GitCompareArrows,
@@ -21,7 +22,11 @@ import { Sheet } from "@/components/ui/Dialog";
 import { EmptyState, ErrorState } from "@/components/ui/Feedback";
 import { PageHeader, StatCard } from "@/components/ui/Layout";
 import { Select } from "@/components/ui/Select";
-import { PageSkeleton } from "@/components/app/AppChrome";
+import { AppLoader } from "@/components/app/AppLoader";
+import {
+  ModelGuideSheet,
+  type GuideModel,
+} from "@/components/app/ModelGuideSheet";
 import { getErrorMessage } from "@/lib/api/client";
 import { api } from "@/lib/api/endpoints";
 import type { TaskType, TrainedModel } from "@/lib/api/types";
@@ -200,7 +205,7 @@ function Leaderboard({ group }: { group: ResultGroup }) {
                     "block h-full rounded-full transition-[width] duration-700",
                     isBest
                       ? "bg-linear-to-r from-emerald-500 to-emerald-400"
-                      : "bg-linear-to-r from-indigo-500 to-violet-500",
+                      : "bg-linear-to-r from-amber-400 to-orange-500",
                   )}
                   style={{ width: `${Math.max(width * 100, 2)}%` }}
                 />
@@ -277,7 +282,7 @@ function ConfusionMatrix({
                         value === 0
                           ? "var(--surface-2)"
                           : correct
-                            ? `rgb(99 102 241 / ${0.15 + intensity * 0.75})`
+                            ? `rgb(249 115 22 / ${0.15 + intensity * 0.75})`
                             : `rgb(239 68 68 / ${0.12 + intensity * 0.6})`,
                       color:
                         intensity > 0.55
@@ -390,7 +395,7 @@ function ModelDetail({ model }: { model: ResultEntry }) {
                   {bar !== null ? (
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-3">
                       <div
-                        className="h-full rounded-full bg-linear-to-r from-indigo-500 to-violet-500"
+                        className="h-full rounded-full bg-linear-to-r from-amber-400 to-orange-500"
                         style={{ width: `${bar * 100}%` }}
                       />
                     </div>
@@ -465,7 +470,7 @@ function ModelDetail({ model }: { model: ResultEntry }) {
                 </span>
                 <span className="h-2 overflow-hidden rounded-full bg-surface-3">
                   <span
-                    className="block h-full rounded-full bg-linear-to-r from-sky-500 to-indigo-500"
+                    className="block h-full rounded-full bg-linear-to-r from-sky-500 to-cyan-400"
                     style={{
                       width: `${(item.importance / maxImportance) * 100}%`,
                     }}
@@ -509,6 +514,7 @@ export function ResultsView() {
   );
   const [groupId, setGroupId] = useState<string | null>(null);
   const [detailKey, setDetailKey] = useState<string | null>(null);
+  const [guideModel, setGuideModel] = useState<GuideModel | null>(null);
   const [deleteKey, setDeleteKey] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -558,7 +564,13 @@ export function ResultsView() {
       </div>
     );
   }
-  if (!results.data) return <PageSkeleton label="Loading your results…" />;
+  if (!results.data)
+    return (
+      <AppLoader
+        title="Loading Your Results"
+        description="Collecting scores, charts, and details for each model."
+      />
+    );
 
   if (!group) {
     return (
@@ -662,12 +674,26 @@ export function ResultsView() {
       <Leaderboard group={group} />
 
       <section aria-labelledby="models-title" className="space-y-4">
-        <h2
-          id="models-title"
-          className="text-center text-2xl font-bold tracking-tight text-fg"
-        >
-          All Models
-        </h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2
+              id="models-title"
+              className="text-2xl font-bold tracking-tight text-fg"
+            >
+              All Models
+            </h2>
+            <p className="mt-0.5 text-sm text-fg-muted">
+              {group.models.length === 1
+                ? "1 model"
+                : `${formatInteger(group.models.length)} models`}{" "}
+              · {group.label}
+            </p>
+          </div>
+          <ButtonLink href="/app/compare" className="shrink-0">
+            <GitCompareArrows aria-hidden="true" />
+            Compare Models
+          </ButtonLink>
+        </div>
         <ul className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {group.models.map((model, index) => {
             const metrics = numericMetrics(model.metrics).slice(0, 4);
@@ -724,7 +750,7 @@ export function ResultsView() {
                               aria-hidden="true"
                             >
                               <div
-                                className="h-full rounded-full bg-linear-to-r from-indigo-500 to-violet-500"
+                                className="h-full rounded-full bg-linear-to-r from-amber-400 to-orange-500"
                                 style={{ width: `${bar * 100}%` }}
                               />
                             </div>
@@ -742,14 +768,31 @@ export function ResultsView() {
                         ? ` · ${formatDuration(model.duration_ms)}`
                         : ""}
                     </p>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setDetailKey(model.key)}
-                    >
-                      <PanelRightOpen aria-hidden="true" />
-                      View Details
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() =>
+                          setGuideModel({
+                            key: model.key,
+                            name: model.name,
+                            category: model.category ?? "",
+                          })
+                        }
+                        aria-label={`How ${model.name} works`}
+                        title="How this model works"
+                      >
+                        <BookOpen aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setDetailKey(model.key)}
+                      >
+                        <PanelRightOpen aria-hidden="true" />
+                        View Details
+                      </Button>
+                    </div>
                   </footer>
                 </article>
               </li>
@@ -764,6 +807,8 @@ export function ResultsView() {
         description="Rank every model on any metric with a leaderboard, bar chart, or radar chart."
         icon={<GitCompareArrows aria-hidden="true" />}
       />
+
+      <ModelGuideSheet model={guideModel} onClose={() => setGuideModel(null)} />
 
       <Sheet
         open={detail !== null}

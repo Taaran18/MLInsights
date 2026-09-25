@@ -132,11 +132,11 @@ export function Checkbox({
         />
         {indeterminate && !checked ? (
           <span className="pointer-events-none absolute inset-0 inline-flex items-center justify-center rounded-md bg-primary">
-            <Minus className="size-3.5 text-white" aria-hidden="true" />
+            <Minus className="size-3.5 text-on-primary" aria-hidden="true" />
           </span>
         ) : (
           <Check
-            className="pointer-events-none absolute inset-0 m-auto size-3.5 text-white opacity-0 transition-opacity peer-checked:opacity-100"
+            className="pointer-events-none absolute inset-0 m-auto size-3.5 text-on-primary opacity-0 transition-opacity peer-checked:opacity-100"
             aria-hidden="true"
           />
         )}
@@ -234,7 +234,7 @@ export function Segmented<T extends string>({
         )
       }
       className={cn(
-        "no-scrollbar inline-flex max-w-full gap-1 overflow-x-auto rounded-xl border border-border bg-surface-2 p-1",
+        "no-scrollbar inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-border bg-surface-2 p-1",
         fullWidth && "flex w-full",
         className,
       )}
@@ -252,12 +252,12 @@ export function Segmented<T extends string>({
             disabled={option.disabled}
             onClick={() => onChange(option.value)}
             className={cn(
-              "inline-flex items-center justify-center gap-2 rounded-lg font-semibold whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 disabled:opacity-40 [&_svg]:size-4 [&_svg]:shrink-0",
+              "inline-flex items-center justify-center gap-2 rounded-full font-semibold whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 disabled:opacity-40 [&_svg]:size-4 [&_svg]:shrink-0",
               size === "md" ? "h-9 px-4 text-sm" : "h-8 px-3 text-xs",
               fullWidth && "flex-1",
               selected
-                ? "bg-surface text-fg shadow-card ring-1 ring-border"
-                : "text-fg-muted hover:text-fg",
+                ? "bg-primary text-on-primary shadow-[0_6px_18px_-8px_rgb(234_88_12/0.7)]"
+                : "text-fg-muted hover:bg-surface hover:text-fg",
             )}
           >
             {option.icon}
@@ -296,7 +296,7 @@ export function Tabs<T extends string>({
         rovingKeyDown(event, tabs, value, onChange, ref.current, '[role="tab"]')
       }
       className={cn(
-        "no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-xl border border-border bg-surface-2 p-1",
+        "no-scrollbar flex max-w-full gap-1.5 overflow-x-auto rounded-full border border-border bg-surface-2 p-1.5",
         className,
       )}
     >
@@ -314,10 +314,10 @@ export function Tabs<T extends string>({
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(tab.value)}
             className={cn(
-              "inline-flex h-10 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 [&_svg]:size-4",
+              "inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-semibold whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 [&_svg]:size-4",
               selected
-                ? "bg-surface text-fg shadow-card ring-1 ring-border"
-                : "text-fg-muted hover:text-fg",
+                ? "bg-primary text-on-primary shadow-[0_6px_18px_-8px_rgb(234_88_12/0.7)]"
+                : "text-fg-muted hover:bg-surface hover:text-fg",
             )}
           >
             {tab.icon}
@@ -426,7 +426,7 @@ export function Progress({
       <div
         className={cn(
           "h-full rounded-full transition-[width] duration-500 ease-out",
-          tone === "brand" && "bg-linear-to-r from-indigo-500 to-violet-500",
+          tone === "brand" && "bg-linear-to-r from-amber-400 to-orange-500",
           tone === "success" && "bg-emerald-500",
           tone === "warning" && "bg-amber-500",
           tone === "danger" && "bg-red-500",

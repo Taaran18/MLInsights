@@ -524,7 +524,7 @@ export default function HomePage() {
                 >
                   <div className="h-full rounded-2xl border border-border bg-surface p-7 shadow-card">
                     <div className="flex items-center gap-3">
-                      <span className="num inline-flex size-10 items-center justify-center rounded-xl bg-primary text-base font-bold text-on-primary shadow-[0_8px_20px_-8px_rgb(79_70_229/0.8)]">
+                      <span className="num inline-flex size-10 items-center justify-center rounded-xl bg-primary text-base font-bold text-on-primary shadow-[0_8px_20px_-8px_rgb(234_88_12/0.8)]">
                         {index + 1}
                       </span>
                       <Icon className="size-5 text-brand" aria-hidden="true" />
@@ -726,7 +726,7 @@ export default function HomePage() {
         <div className="container-wide">
           <div
             data-reveal="scale"
-            className="relative overflow-hidden rounded-3xl border border-brand-line bg-linear-to-br from-indigo-600 via-indigo-700 to-violet-700 px-6 py-16 text-center shadow-[0_40px_80px_-40px_rgb(79_70_229/0.7)] sm:px-12 lg:py-24"
+            className="relative overflow-hidden rounded-3xl border border-brand-line bg-linear-to-br from-orange-600 via-orange-700 to-red-800 px-6 py-16 text-center shadow-[0_40px_80px_-40px_rgb(234_88_12/0.7)] sm:px-12 lg:py-24"
           >
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgb(255_255_255/0.18),transparent)]" />
             <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,rgb(255_255_255/0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgb(255_255_255/0.06)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)] [background-size:48px_48px]" />
@@ -737,14 +737,14 @@ export default function HomePage() {
               >
                 Ready to See What Your Data Can Do?
               </h2>
-              <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-indigo-100">
+              <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-orange-50">
                 Upload a dataset and get insights, trained models, and a full
                 report in minutes. No account and no setup.
               </p>
               <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link
                   href="/app"
-                  className="inline-flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 text-base font-semibold text-indigo-700 shadow-lg transition-transform hover:-translate-y-0.5 sm:w-auto"
+                  className="inline-flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 text-base font-semibold text-orange-800 shadow-lg transition-transform hover:-translate-y-0.5 sm:w-auto"
                 >
                   Start Your First Analysis
                   <ArrowRight className="size-5" aria-hidden="true" />

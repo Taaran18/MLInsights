@@ -47,7 +47,7 @@ export function LogoMark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-linear-to-br from-indigo-500 via-indigo-600 to-violet-600 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25),0_8px_20px_-10px_rgb(79_70_229/0.9)]",
+        "inline-flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-linear-to-br from-amber-400 via-orange-500 to-red-500 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.3),0_8px_20px_-10px_rgb(234_88_12/0.9)]",
         className,
       )}
     >

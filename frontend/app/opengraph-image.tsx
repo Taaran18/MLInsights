@@ -32,7 +32,7 @@ export default function OpengraphImage() {
             height: 76,
             borderRadius: 22,
             background:
-              "linear-gradient(135deg, #6366f1 0%, #4f46e5 55%, #7c3aed 100%)",
+              "linear-gradient(135deg, #fbbf24 0%, #f97316 55%, #ef4444 100%)",
           }}
         >
           <svg width="48" height="48" viewBox="0 0 24 24" fill="#ffffff">
@@ -65,7 +65,7 @@ export default function OpengraphImage() {
           }}
         >
           <span>ML</span>
-          <span style={{ color: "#a5b4fc" }}>Insights</span>
+          <span style={{ color: "#fdba74" }}>Insights</span>
         </div>
       </div>
 
@@ -86,9 +86,9 @@ export default function OpengraphImage() {
           style={{ display: "flex", gap: 16, fontSize: 28, color: "#a7adba" }}
         >
           <span>{TOTAL_MODELS} models</span>
-          <span style={{ color: "#4f46e5" }}>•</span>
+          <span style={{ color: "#f97316" }}>•</span>
           <span>No code, no account</span>
-          <span style={{ color: "#4f46e5" }}>•</span>
+          <span style={{ color: "#f97316" }}>•</span>
           <span>Data expires in {SESSION_TTL_HOURS} hours</span>
         </div>
       </div>

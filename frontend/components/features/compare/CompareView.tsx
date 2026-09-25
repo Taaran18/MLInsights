@@ -26,10 +26,26 @@ import {
   Crown,
   Download,
   GitCompareArrows,
+  ChartColumnBig,
+  ChartLine,
+  ChartScatter,
+  Grid3x3,
+  Info,
   Radar as RadarIcon,
   Table2,
 } from "lucide-react";
-import { NextStep, PageSkeleton } from "@/components/app/AppChrome";
+import { NextStep } from "@/components/app/AppChrome";
+import { AppLoader } from "@/components/app/AppLoader";
+import {
+  ComparisonSummary,
+  GroupedBars,
+  MetricGuideGrid,
+  MetricHeatmap,
+  MetricSheet,
+  MetricTip,
+  ProfileLines,
+  SpeedScatter,
+} from "@/components/features/compare/CompareCharts";
 import { ButtonLink } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Controls";
 import { Callout, EmptyState, ErrorState } from "@/components/ui/Feedback";
@@ -53,7 +69,8 @@ import { useReadySession } from "@/lib/session";
 import { useResource } from "@/lib/use-resource";
 import { cn, formatDecimal } from "@/lib/utils";
 
-type View = "table" | "bar" | "radar";
+type View =
+  "table" | "bar" | "grouped" | "heatmap" | "line" | "radar" | "scatter";
 
 const HIDDEN = new Set([
   "model_key",
@@ -63,6 +80,7 @@ const HIDDEN = new Set([
   "category",
   "n_clusters",
   "n_noise_points",
+  "duration_ms",
 ]);
 
 interface Group {
@@ -92,7 +110,7 @@ function useChartColors() {
   const { theme } = usePreferences();
   return theme === "dark"
     ? { grid: "#25272f", axis: "#868d9c", cursor: "rgba(255,255,255,0.05)" }
-    : { grid: "#e3e6ee", axis: "#5d6474", cursor: "rgba(79,70,229,0.06)" };
+    : { grid: "#e3e6ee", axis: "#5d6474", cursor: "rgba(234,88,12,0.06)" };
 }
 
 function buildGroups(rows: ComparisonRow[]): Group[] {
@@ -173,6 +191,7 @@ export function CompareView() {
   const [view, setView] = useState<View>("table");
   const [metricOverride, setMetricOverride] = useState<string | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [metricInfo, setMetricInfo] = useState<string | null>(null);
 
   const groups = useMemo(
     () => buildGroups(compare.data?.comparison ?? []),
@@ -200,7 +219,13 @@ export function CompareView() {
       </div>
     );
   }
-  if (!compare.data) return <PageSkeleton label="Loading your models…" />;
+  if (!compare.data)
+    return (
+      <AppLoader
+        title="Loading Your Models"
+        description="Gathering every trained model and its scores."
+      />
+    );
   if (!group) {
     return (
       <div className="space-y-10">
@@ -314,8 +339,51 @@ export function CompareView() {
         aria-label="Comparison controls"
         className="space-y-5 rounded-2xl border border-border bg-surface p-5 shadow-card sm:p-6"
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <Segmented
+            aria-label="Comparison view"
+            className="w-fit"
+            value={view}
+            onChange={setView}
+            options={[
+              {
+                value: "table",
+                label: "Leaderboard",
+                icon: <Table2 aria-hidden="true" />,
+              },
+              {
+                value: "bar",
+                label: "Bar Chart",
+                icon: <ChartColumn aria-hidden="true" />,
+              },
+              {
+                value: "grouped",
+                label: "All Metrics",
+                icon: <ChartColumnBig aria-hidden="true" />,
+              },
+              {
+                value: "heatmap",
+                label: "Heatmap",
+                icon: <Grid3x3 aria-hidden="true" />,
+              },
+              {
+                value: "line",
+                label: "Profile",
+                icon: <ChartLine aria-hidden="true" />,
+              },
+              {
+                value: "radar",
+                label: "Radar",
+                icon: <RadarIcon aria-hidden="true" />,
+              },
+              {
+                value: "scatter",
+                label: "Score vs Speed",
+                icon: <ChartScatter aria-hidden="true" />,
+              },
+            ]}
+          />
+          <div className="ml-auto flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-end">
             {groups.length > 1 ? (
               <div className="w-full sm:w-72">
                 <p
@@ -366,28 +434,6 @@ export function CompareView() {
               />
             </div>
           </div>
-          <Segmented
-            aria-label="Comparison view"
-            value={view}
-            onChange={setView}
-            options={[
-              {
-                value: "table",
-                label: "Leaderboard",
-                icon: <Table2 aria-hidden="true" />,
-              },
-              {
-                value: "bar",
-                label: "Bar Chart",
-                icon: <ChartColumn aria-hidden="true" />,
-              },
-              {
-                value: "radar",
-                label: "Radar",
-                icon: <RadarIcon aria-hidden="true" />,
-              },
-            ]}
-          />
         </div>
         <div>
           <p className="mb-2.5 text-sm font-semibold text-fg">
@@ -429,6 +475,8 @@ export function CompareView() {
         </div>
       </section>
 
+      <ComparisonSummary rows={shown} metric={metric} />
+
       {view === "table" ? (
         <TableContainer label="Model leaderboard" maxHeight="40rem">
           <table className="data-table">
@@ -457,32 +505,47 @@ export function CompareView() {
                       }
                       className="p-0 text-right"
                     >
-                      <button
-                        type="button"
-                        onClick={() => setMetricOverride(name)}
-                        className={cn(
-                          "inline-flex w-full items-center justify-end gap-1.5 px-4 py-3 text-xs font-semibold tracking-wide uppercase",
-                          active ? "text-brand" : "hover:text-fg",
-                        )}
-                        title={METRIC_DESCRIPTIONS[name]}
-                      >
-                        {name}
-                        {active ? (
-                          dir === "lower" ? (
-                            <ArrowUp className="size-3.5" aria-hidden="true" />
-                          ) : (
-                            <ArrowDown
-                              className="size-3.5"
-                              aria-hidden="true"
-                            />
-                          )
-                        ) : (
-                          <ArrowUpDown
-                            className="size-3.5 opacity-40"
-                            aria-hidden="true"
-                          />
-                        )}
-                      </button>
+                      <span className="flex items-center justify-end">
+                        <MetricTip name={name}>
+                          <button
+                            type="button"
+                            onClick={() => setMetricOverride(name)}
+                            aria-label={`Sort by ${name}`}
+                            className={cn(
+                              "inline-flex items-center justify-end gap-1.5 py-3 pl-4 text-xs font-semibold tracking-wide",
+                              active ? "text-brand" : "hover:text-fg",
+                            )}
+                          >
+                            {name}
+                            {active ? (
+                              dir === "lower" ? (
+                                <ArrowUp
+                                  className="size-3.5"
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <ArrowDown
+                                  className="size-3.5"
+                                  aria-hidden="true"
+                                />
+                              )
+                            ) : (
+                              <ArrowUpDown
+                                className="size-3.5 opacity-40"
+                                aria-hidden="true"
+                              />
+                            )}
+                          </button>
+                        </MetricTip>
+                        <button
+                          type="button"
+                          onClick={() => setMetricInfo(name)}
+                          aria-label={`What ${name} means`}
+                          className="mr-2 ml-1 inline-flex size-6 items-center justify-center rounded-full text-fg-subtle transition-colors hover:bg-brand-soft hover:text-brand"
+                        >
+                          <Info className="size-3.5" aria-hidden="true" />
+                        </button>
+                      </span>
                     </th>
                   );
                 })}
@@ -696,6 +759,53 @@ export function CompareView() {
           />
         )
       ) : null}
+
+      {view === "grouped" ? (
+        <GroupedBars
+          rows={shown}
+          metrics={group.metrics}
+          colorFor={colorFor}
+          palette={colors}
+        />
+      ) : null}
+
+      {view === "heatmap" ? (
+        <MetricHeatmap
+          rows={sorted}
+          metrics={group.metrics}
+          onMetric={setMetricInfo}
+        />
+      ) : null}
+
+      {view === "line" ? (
+        <ProfileLines
+          rows={shown}
+          metrics={group.metrics}
+          colorFor={colorFor}
+          palette={colors}
+        />
+      ) : null}
+
+      {view === "scatter" && metric ? (
+        <SpeedScatter
+          rows={shown}
+          metric={metric}
+          colorFor={colorFor}
+          palette={colors}
+        />
+      ) : null}
+
+      <MetricGuideGrid
+        rows={shown}
+        metrics={group.metrics}
+        onOpen={setMetricInfo}
+      />
+
+      <MetricSheet
+        name={metricInfo}
+        rows={shown}
+        onClose={() => setMetricInfo(null)}
+      />
 
       <NextStep
         href="/app/export"

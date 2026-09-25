@@ -14,12 +14,13 @@ import {
   TimerOff,
   WifiOff,
 } from "lucide-react";
+import { AppLoader } from "@/components/app/AppLoader";
 import { Logo, LogoMark } from "@/components/brand/Logo";
 import { ThemeSegmented, ThemeToggle } from "@/components/theme/ThemeControls";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Dialog";
-import { EmptyState, ErrorState, Skeleton } from "@/components/ui/Feedback";
+import { EmptyState, ErrorState } from "@/components/ui/Feedback";
 import {
   GENERAL_NAV,
   WORKFLOW_NAV,
@@ -199,63 +200,6 @@ export function AppTopBar() {
   );
 }
 
-export function AppFooter() {
-  return (
-    <footer className="border-t border-border">
-      <div className="container-app flex flex-col gap-4 py-6 text-sm text-fg-subtle sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2.5">
-          <LogoMark className="size-7" />
-          <span>
-            © {new Date().getFullYear()} MLInsights · Data expires after{" "}
-            {SESSION_TTL_HOURS} hours
-          </span>
-        </div>
-        <nav aria-label="Legal">
-          <ul className="flex flex-wrap gap-x-5 gap-y-2">
-            <li>
-              <Link href="/privacy" className="transition-colors hover:text-fg">
-                Privacy Policy
-              </Link>
-            </li>
-            <li>
-              <Link href="/terms" className="transition-colors hover:text-fg">
-                Terms of Service
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/disclaimer"
-                className="transition-colors hover:text-fg"
-              >
-                Disclaimer
-              </Link>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    </footer>
-  );
-}
-
-export function PageSkeleton({ label }: { label: string }) {
-  return (
-    <div className="space-y-8" aria-busy="true" aria-live="polite">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-4">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-12 w-3/4" />
-        <Skeleton className="h-5 w-2/3" />
-        <p className="text-sm text-fg-muted">{label}</p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-28 rounded-2xl" />
-        ))}
-      </div>
-      <Skeleton className="h-80 rounded-2xl" />
-    </div>
-  );
-}
-
 export function SessionGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { status, error, reload } = useSession();
@@ -264,9 +208,20 @@ export function SessionGate({ children }: { children: ReactNode }) {
 
   switch (status) {
     case "restoring":
-      return <PageSkeleton label="Restoring your workspace…" />;
+      return (
+        <AppLoader
+          title="Restoring Your Workspace"
+          description="Picking up where you left off."
+        />
+      );
     case "loading":
-      return <PageSkeleton label="Loading your dataset…" />;
+      return (
+        <AppLoader
+          title="Loading Your Dataset"
+          description="Reading the file, profiling every column, and preparing your workspace."
+          steps={["Reading rows", "Detecting types", "Profiling columns"]}
+        />
+      );
     case "empty":
       return (
         <EmptyState

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AppFooter, AppTopBar, SessionGate } from "@/components/app/AppChrome";
+import { AppTopBar, SessionGate } from "@/components/app/AppChrome";
 import { ServerWakeNotice } from "@/components/app/ServerWakeNotice";
 import { Sidebar } from "@/components/app/Sidebar";
 import { TrainingModal } from "@/components/app/TrainingModal";
@@ -22,7 +22,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <SessionGate>{children}</SessionGate>
           </main>
-          <AppFooter />
         </div>
         <TrainingModal />
         <ServerWakeNotice />

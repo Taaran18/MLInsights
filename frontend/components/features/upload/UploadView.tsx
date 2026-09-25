@@ -6,13 +6,16 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   ArrowRight,
+  ArrowUpRight,
+  Bird,
   CircleAlert,
   CloudUpload,
   FileSpreadsheet,
-  FlaskConical,
   Flower2,
   HeartPulse,
   LoaderCircle,
+  ShieldCheck,
+  Wine,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
@@ -49,8 +52,28 @@ const SAMPLES = [
     rows: 150,
     columns: 5,
     icon: Flower2,
-    description:
-      "Predict a flower's species from petal and sepal measurements.",
+    accent: "from-emerald-400 to-teal-500",
+    description: "Predict a flower's species from petal and sepal size.",
+  },
+  {
+    file: "penguins.csv",
+    title: "Palmer Penguins",
+    task: "Classification",
+    rows: 344,
+    columns: 7,
+    icon: Bird,
+    accent: "from-sky-400 to-blue-500",
+    description: "Has missing values and text columns, great for cleaning.",
+  },
+  {
+    file: "wine.csv",
+    title: "Wine Cultivars",
+    task: "Classification",
+    rows: 178,
+    columns: 14,
+    icon: Wine,
+    accent: "from-rose-400 to-pink-600",
+    description: "Tell three grape cultivars apart from chemical analysis.",
   },
   {
     file: "diabetes.csv",
@@ -59,9 +82,15 @@ const SAMPLES = [
     rows: 442,
     columns: 11,
     icon: HeartPulse,
-    description:
-      "Predict disease progression from age, BMI, blood pressure, and blood tests.",
+    accent: "from-amber-400 to-orange-500",
+    description: "Predict disease progression from age, BMI, and blood tests.",
   },
+];
+
+const TIPS = [
+  "One header row",
+  "One row per record",
+  "Include the column to predict",
 ];
 
 function validateFile(file: File): string | null {
@@ -328,17 +357,15 @@ export function UploadView() {
         : 0;
 
   return (
-    <div className="space-y-10 lg:space-y-12">
-      <PageHeader
-        eyebrow="Step 1 · Upload"
-        title="Start a New Analysis"
-        description={`Upload a CSV or Excel file to explore it, clean it, and train models. Files up to ${MAX_UPLOAD_MB} MB are supported.`}
-      />
+    <div className="space-y-12">
+      <div className="flex min-h-[calc(100dvh-9.5rem)] flex-col justify-center gap-6 lg:min-h-[calc(100dvh-10.5rem)]">
+        <PageHeader
+          eyebrow="Step 1 · Upload"
+          title="Start a New Analysis"
+          description={`Drop a CSV or Excel file up to ${MAX_UPLOAD_MB} MB, or pick a sample below.`}
+        />
 
-      <ContinueCard />
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <section aria-label="Upload a dataset" className="space-y-4">
+        <section aria-label="Upload a dataset" className="space-y-3">
           <label
             htmlFor={inputId}
             onDragEnter={onDragEnter}
@@ -346,13 +373,17 @@ export function UploadView() {
             onDragLeave={onDragLeave}
             onDrop={onDrop}
             className={cn(
-              "relative flex min-h-80 flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-14 text-center transition-[border-color,background-color] duration-200 has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-ring sm:min-h-96",
+              "relative flex min-h-[clamp(12rem,30dvh,21rem)] flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed px-6 py-8 text-center transition-[border-color,background-color] duration-200 has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-ring",
               busy ? "cursor-default" : "cursor-pointer",
               dragging
                 ? "border-primary bg-brand-soft"
                 : "border-border-strong bg-surface hover:border-brand-line hover:bg-bg-alt",
             )}
           >
+            <div
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_60%_at_50%_0%,var(--brand-soft),transparent)]"
+              aria-hidden="true"
+            />
             <input
               ref={inputRef}
               id={inputId}
@@ -368,14 +399,14 @@ export function UploadView() {
             />
 
             {busy ? (
-              <div className="w-full max-w-md" aria-live="polite">
+              <div className="relative w-full max-w-md" aria-live="polite">
                 <span className="mx-auto inline-flex size-16 items-center justify-center rounded-2xl border border-brand-line bg-brand-soft text-brand">
                   <LoaderCircle
                     className="size-7 animate-spin"
                     aria-hidden="true"
                   />
                 </span>
-                <p className="mt-6 text-xl font-bold tracking-tight text-fg">
+                <p className="mt-5 text-xl font-bold tracking-tight text-fg">
                   {state.status === "processing"
                     ? "Reading Your Data"
                     : "Uploading Your File"}
@@ -386,7 +417,7 @@ export function UploadView() {
                 <Progress
                   value={progressPercent}
                   label="Upload progress"
-                  className="mt-6"
+                  className="mt-5"
                 />
                 <p className="num mt-3 text-sm text-fg-subtle">
                   {state.status === "processing"
@@ -396,7 +427,7 @@ export function UploadView() {
                 {state.status === "uploading" ? (
                   <Button
                     variant="ghost"
-                    className="mt-4"
+                    className="mt-3"
                     onClick={(event) => {
                       event.preventDefault();
                       controllerRef.current?.abort();
@@ -408,23 +439,23 @@ export function UploadView() {
                 ) : null}
               </div>
             ) : (
-              <>
+              <div className="relative flex flex-col items-center">
                 <span
                   className={cn(
-                    "inline-flex size-16 items-center justify-center rounded-2xl border transition-transform duration-300",
+                    "inline-flex size-16 items-center justify-center rounded-2xl transition-transform duration-300",
                     dragging
-                      ? "scale-110 border-primary bg-primary text-on-primary"
-                      : "border-brand-line bg-brand-soft text-brand",
+                      ? "scale-110 bg-primary text-on-primary"
+                      : "bg-linear-to-br from-amber-400 via-orange-500 to-red-500 text-white shadow-[0_12px_28px_-12px_rgb(234_88_12/0.9)]",
                   )}
                 >
                   <CloudUpload className="size-7" aria-hidden="true" />
                 </span>
-                <p className="mt-6 text-2xl font-bold tracking-tight text-fg">
+                <p className="mt-5 text-2xl font-bold tracking-tight text-fg">
                   {dragging
                     ? "Drop Your File to Upload"
                     : "Drag and Drop Your Dataset"}
                 </p>
-                <p className="mt-2 text-fg-muted">
+                <p className="mt-1.5 text-fg-muted">
                   or{" "}
                   <span className="font-semibold text-brand underline-offset-4">
                     browse your files
@@ -432,7 +463,7 @@ export function UploadView() {
                 </p>
                 <div
                   id={hintId}
-                  className="mt-6 flex flex-wrap items-center justify-center gap-2"
+                  className="mt-5 flex flex-wrap items-center justify-center gap-2"
                 >
                   {ACCEPTED_EXTENSIONS.map((extension) => (
                     <Badge
@@ -448,7 +479,18 @@ export function UploadView() {
                     Up to {MAX_UPLOAD_MB} MB
                   </Badge>
                 </div>
-              </>
+                <ul className="mt-4 hidden flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-fg-subtle sm:flex [@media(max-height:50rem)]:hidden">
+                  {TIPS.map((tip) => (
+                    <li key={tip} className="inline-flex items-center gap-1.5">
+                      <span
+                        className="size-1 rounded-full bg-brand"
+                        aria-hidden="true"
+                      />
+                      {tip}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </label>
 
@@ -477,88 +519,74 @@ export function UploadView() {
               </button>
             </div>
           ) : null}
-
-          <p className="text-center text-sm text-fg-subtle">
-            Files are stored temporarily and expire {SESSION_TTL_HOURS} hours
-            after upload.{" "}
-            <Link
-              href="/privacy"
-              className="font-semibold text-brand hover:underline"
-            >
-              Privacy Policy
-            </Link>
-          </p>
         </section>
 
-        <aside className="space-y-4" aria-labelledby="samples-title">
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
-            <div className="flex items-center gap-2">
-              <FlaskConical className="size-5 text-brand" aria-hidden="true" />
-              <h2
-                id="samples-title"
-                className="text-lg font-bold tracking-tight text-fg"
+        <section aria-labelledby="samples-title" className="space-y-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <h2
+              id="samples-title"
+              className="text-lg font-bold tracking-tight text-fg"
+            >
+              Or Start With a Sample Dataset
+            </h2>
+            <p className="inline-flex items-center gap-1.5 text-sm text-fg-subtle">
+              <ShieldCheck className="size-4 text-success" aria-hidden="true" />
+              Files expire {SESSION_TTL_HOURS} hours after upload.{" "}
+              <Link
+                href="/privacy"
+                className="font-semibold text-brand hover:underline"
               >
-                Try a Sample Dataset
-              </h2>
-            </div>
-            <p className="mt-1 text-sm text-fg-muted">
-              No data handy? Explore the full workflow with a classic dataset.
+                Privacy Policy
+              </Link>
             </p>
-            <ul className="mt-4 space-y-3">
-              {SAMPLES.map((sample) => {
-                const Icon = sample.icon;
-                return (
-                  <li
-                    key={sample.file}
-                    className="rounded-xl border border-border bg-bg-alt p-4"
+          </div>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {SAMPLES.map((sample) => {
+              const Icon = sample.icon;
+              return (
+                <li key={sample.file}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void loadSample(sample.file)}
+                    aria-label={`Use the ${sample.title} sample dataset`}
+                    className="group relative flex h-full w-full items-start gap-3.5 overflow-hidden rounded-2xl border border-border bg-surface p-4 text-left shadow-card transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-brand-line hover:shadow-card-hover disabled:pointer-events-none disabled:opacity-50"
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-brand">
-                        <Icon className="size-4.5" aria-hidden="true" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-fg">
-                          {sample.title}
-                        </p>
-                        <p className="num text-xs text-fg-subtle">
-                          {sample.task} · {sample.rows} rows · {sample.columns}{" "}
-                          columns
-                        </p>
-                      </div>
-                    </div>
-                    <p className="mt-3 text-sm text-fg-muted">
-                      {sample.description}
-                    </p>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="mt-3 w-full"
-                      disabled={busy}
-                      onClick={() => void loadSample(sample.file)}
+                    <span
+                      className={cn(
+                        "inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br text-white shadow-sm",
+                        sample.accent,
+                      )}
                     >
-                      Use This Sample
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-bg-alt p-5">
-            <h2 className="text-base font-bold text-fg">What Works Best</h2>
-            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-fg-muted">
-              <li>One row per record and one column per attribute.</li>
-              <li>A single header row with a name for every column.</li>
-              <li>
-                A column you want to predict, such as a price or a category.
-              </li>
-              <li>
-                Remove personal details you don&apos;t need before uploading.
-              </li>
-            </ul>
-          </div>
-        </aside>
+                      <Icon className="size-5" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-bold text-fg">
+                          {sample.title}
+                        </span>
+                        <ArrowUpRight
+                          className="size-4 shrink-0 text-fg-subtle transition-[color,transform] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-brand"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span className="num mt-0.5 block text-xs text-fg-subtle">
+                        {sample.task} · {sample.rows} rows · {sample.columns}{" "}
+                        columns
+                      </span>
+                      <span className="mt-1.5 block text-sm leading-snug text-fg-muted">
+                        {sample.description}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       </div>
+
+      <ContinueCard />
 
       <RecentSessions />
     </div>

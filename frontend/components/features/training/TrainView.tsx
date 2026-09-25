@@ -13,7 +13,11 @@ import {
   SlidersHorizontal,
   Sparkles,
   Star,
-  Target,
+  Ban,
+  Info,
+  MoveHorizontal,
+  ShieldHalf,
+  Sigma,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
@@ -29,6 +33,8 @@ import {
 } from "@/components/ui/Feedback";
 import { Field, PageHeader } from "@/components/ui/Layout";
 import { Select } from "@/components/ui/Select";
+import { TargetPreview } from "@/components/features/training/TargetPreview";
+import { ModelGuideSheet } from "@/components/app/ModelGuideSheet";
 import { api } from "@/lib/api/endpoints";
 import type { ModelInfo, ScalerType, TaskType } from "@/lib/api/types";
 import { TASK_LABELS } from "@/lib/metrics";
@@ -68,28 +74,137 @@ const TASKS: {
   },
 ];
 
-const SCALERS: { value: ScalerType; label: string; description: string }[] = [
+const SCALERS: {
+  value: ScalerType;
+  label: string;
+  description: string;
+  icon: ReactNode;
+}[] = [
   {
     value: "standard",
     label: "Standard (Recommended)",
     description: "Centers each column at 0 with unit variance.",
+    icon: <Sigma aria-hidden="true" />,
   },
   {
     value: "minmax",
     label: "Min-Max",
     description: "Rescales each column to the range 0 to 1.",
+    icon: <MoveHorizontal aria-hidden="true" />,
   },
   {
     value: "robust",
     label: "Robust",
     description: "Uses the median and IQR, so outliers matter less.",
+    icon: <ShieldHalf aria-hidden="true" />,
   },
   {
     value: "none",
     label: "None",
     description: "Use raw values. Fine for tree-based models.",
+    icon: <Ban aria-hidden="true" />,
   },
 ];
+
+const SCALER_EXAMPLE = [12, 18, 25, 31, 95];
+
+const SCALER_DETAILS: Record<
+  ScalerType,
+  {
+    formula: string;
+    legend: string;
+    bestFor: string;
+    transform: (x: number) => number;
+  }
+> = {
+  standard: {
+    formula: "z = (x − μ) ÷ σ",
+    legend: "μ is the column mean and σ its standard deviation.",
+    bestFor: "Linear models, SVMs, neural networks, and most everyday data.",
+    transform: (x) => {
+      const mean =
+        SCALER_EXAMPLE.reduce((sum, value) => sum + value, 0) /
+        SCALER_EXAMPLE.length;
+      const std = Math.sqrt(
+        SCALER_EXAMPLE.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
+          SCALER_EXAMPLE.length,
+      );
+      return (x - mean) / std;
+    },
+  },
+  minmax: {
+    formula: "x′ = (x − min) ÷ (max − min)",
+    legend: "Every value lands between 0 and 1.",
+    bestFor: "K-Nearest Neighbors and neural networks with bounded inputs.",
+    transform: (x) => (x - 12) / (95 - 12),
+  },
+  robust: {
+    formula: "x′ = (x − median) ÷ IQR",
+    legend: "IQR is the spread between the 25th and 75th percentiles.",
+    bestFor: "Data with outliers, like prices, incomes, or sensor spikes.",
+    transform: (x) => (x - 25) / (31 - 18),
+  },
+  none: {
+    formula: "x′ = x",
+    legend: "Values reach the model exactly as they are.",
+    bestFor: "Tree-based models such as Random Forest, XGBoost, and LightGBM.",
+    transform: (x) => x,
+  },
+};
+
+function ScalerExplainer({ scaler }: { scaler: ScalerType }) {
+  const detail = SCALER_DETAILS[scaler];
+  return (
+    <div className="mt-3 rounded-xl border border-border bg-bg-alt p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <code className="rounded-lg bg-surface px-3 py-1.5 font-mono text-sm font-semibold text-brand ring-1 ring-brand-line">
+          {detail.formula}
+        </code>
+        <span className="text-xs text-fg-subtle">{detail.legend}</span>
+      </div>
+      <div
+        className="mt-4 space-y-2 text-xs"
+        aria-label="Example transformation"
+      >
+        {[
+          { label: "Before", values: SCALER_EXAMPLE, raw: true },
+          {
+            label: "After",
+            values: SCALER_EXAMPLE.map(detail.transform),
+            raw: false,
+          },
+        ].map((row) => (
+          <div key={row.label} className="flex items-center gap-2">
+            <span className="w-12 shrink-0 font-semibold text-fg-muted">
+              {row.label}
+            </span>
+            <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+              {row.values.map((value, index) => (
+                <span
+                  key={index}
+                  className={cn(
+                    "num rounded-md px-2 py-1 font-mono font-semibold",
+                    row.raw
+                      ? "bg-surface-2 text-fg-muted"
+                      : "bg-brand-soft text-brand",
+                    index === SCALER_EXAMPLE.length - 1 &&
+                      "ring-1 ring-warning-line",
+                  )}
+                >
+                  {row.raw ? value : value.toFixed(2)}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-fg-muted">
+        <span className="font-semibold text-fg">Best for:</span>{" "}
+        {detail.bestFor} The outlined value (95) is an outlier.
+      </p>
+    </div>
+  );
+}
 
 function StepHeader({
   step,
@@ -154,45 +269,51 @@ function ModelCard({
   recommended,
   trained,
   onToggle,
+  onDetails,
 }: {
   model: ModelInfo;
   selected: boolean;
   recommended: boolean;
   trained: boolean;
   onToggle: () => void;
+  onDetails: () => void;
 }) {
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onToggle}
+    <div
       className={cn(
-        "group relative flex h-full w-full flex-col rounded-xl border p-4 text-left transition-[border-color,background-color,box-shadow] duration-150",
+        "group relative flex h-full flex-col rounded-2xl border transition-[border-color,background-color,box-shadow] duration-150",
         selected
           ? "border-primary bg-brand-soft ring-1 ring-brand-line"
           : "border-border bg-surface hover:border-border-strong hover:bg-bg-alt",
       )}
     >
-      <span className="flex items-start justify-between gap-3">
-        <span className="text-sm leading-snug font-bold text-fg">
-          {model.name}
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={onToggle}
+        className="flex flex-1 flex-col rounded-2xl p-4 pb-2 text-left"
+      >
+        <span className="flex items-start justify-between gap-3">
+          <span className="text-sm leading-snug font-bold text-fg">
+            {model.name}
+          </span>
+          <span
+            className={cn(
+              "inline-flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors",
+              selected
+                ? "border-primary bg-primary text-on-primary"
+                : "border-border-strong bg-surface",
+            )}
+            aria-hidden="true"
+          >
+            {selected ? <Check className="size-3.5" /> : null}
+          </span>
         </span>
-        <span
-          className={cn(
-            "inline-flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors",
-            selected
-              ? "border-primary bg-primary text-white"
-              : "border-border-strong bg-surface",
-          )}
-          aria-hidden="true"
-        >
-          {selected ? <Check className="size-3.5" /> : null}
+        <span className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-fg-muted">
+          {model.description}
         </span>
-      </span>
-      <span className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-fg-muted">
-        {model.description}
-      </span>
-      <span className="mt-auto flex flex-wrap gap-1.5 pt-3">
+      </button>
+      <span className="flex flex-wrap items-center gap-1.5 px-4 pt-1 pb-4">
         <Badge tone="neutral">{model.category}</Badge>
         {recommended ? (
           <Badge tone="warning">
@@ -206,8 +327,17 @@ function ModelCard({
             Trained
           </Badge>
         ) : null}
+        <button
+          type="button"
+          onClick={onDetails}
+          aria-label={`Details about ${model.name}`}
+          className="ml-auto inline-flex h-7 items-center gap-1 rounded-full border border-border bg-surface px-2.5 text-xs font-semibold text-fg-muted transition-colors hover:border-brand-line hover:text-brand"
+        >
+          <Info className="size-3.5" aria-hidden="true" />
+          Details
+        </button>
       </span>
-    </button>
+    </div>
   );
 }
 
@@ -236,6 +366,7 @@ export function TrainView() {
   const [recommendedOnly, setRecommendedOnly] = useState(false);
   const [showFeatures, setShowFeatures] = useState(false);
   const [confirmReplace, setConfirmReplace] = useState(false);
+  const [guideModel, setGuideModel] = useState<ModelInfo | null>(null);
 
   const supervised = task !== "clustering";
 
@@ -434,7 +565,7 @@ export function TrainView() {
                   className={cn(
                     "inline-flex size-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-5",
                     active
-                      ? "border-primary bg-primary text-white"
+                      ? "border-primary bg-primary text-on-primary"
                       : "border-border bg-surface-2 text-fg-muted",
                   )}
                 >
@@ -465,7 +596,7 @@ export function TrainView() {
             description="The column your models will learn to predict. Every other column becomes an input."
             done={Boolean(target)}
           />
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
             <div>
               <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg">
                 <Lightbulb className="size-4 text-warning" aria-hidden="true" />
@@ -492,6 +623,14 @@ export function TrainView() {
                   {suggestions.data.suggestions.map((item, index) => {
                     const active = item.column === target;
                     const strength = item.score / maxScore;
+                    const tile =
+                      index === 0
+                        ? "from-amber-400 via-orange-500 to-red-500"
+                        : index === 1
+                          ? "from-sky-400 to-blue-500"
+                          : index === 2
+                            ? "from-emerald-400 to-teal-500"
+                            : "from-slate-400 to-slate-600";
                     return (
                       <button
                         key={item.column}
@@ -500,40 +639,63 @@ export function TrainView() {
                         aria-checked={active}
                         onClick={() => setTarget(item.column)}
                         className={cn(
-                          "rounded-xl border p-4 text-left transition-[border-color,background-color]",
+                          "group relative overflow-hidden rounded-2xl border p-4 text-left transition-[border-color,background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5",
                           active
-                            ? "border-primary bg-brand-soft ring-1 ring-brand-line"
-                            : "border-border bg-surface hover:border-border-strong",
+                            ? "border-primary bg-brand-soft shadow-[0_12px_32px_-16px_rgb(234_88_12/0.8)] ring-1 ring-brand-line"
+                            : "border-border bg-surface hover:border-brand-line hover:shadow-card-hover",
                         )}
                       >
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="truncate text-sm font-bold text-fg">
-                            {item.column}
+                        <span className="flex items-start gap-3">
+                          <span
+                            className={cn(
+                              "num inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br text-sm font-extrabold text-white shadow-md",
+                              tile,
+                            )}
+                          >
+                            {active ? (
+                              <Check className="size-5" aria-hidden="true" />
+                            ) : (
+                              `#${index + 1}`
+                            )}
                           </span>
-                          {index === 0 ? (
-                            <Badge tone="warning">
-                              <Star aria-hidden="true" />
-                              Best Match
-                            </Badge>
-                          ) : null}
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center justify-between gap-2">
+                              <span className="truncate font-mono text-sm font-bold text-fg">
+                                {item.column}
+                              </span>
+                              {index === 0 ? (
+                                <Badge tone="warning">
+                                  <Star aria-hidden="true" />
+                                  Best Match
+                                </Badge>
+                              ) : null}
+                            </span>
+                            <span className="mt-1 line-clamp-2 block text-xs leading-relaxed text-fg-muted">
+                              {item.reasons.slice(0, 2).join(" · ")}
+                            </span>
+                          </span>
                         </span>
-                        <span className="mt-3 flex items-center gap-2">
-                          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-3">
+                        <span className="mt-4 flex items-center gap-3">
+                          <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-3">
                             <span
-                              className={cn(
-                                "block h-full rounded-full",
-                                strength > 0.66
-                                  ? "bg-emerald-500"
-                                  : strength > 0.33
-                                    ? "bg-amber-500"
-                                    : "bg-sky-500",
-                              )}
+                              className="block h-full rounded-full bg-linear-to-r from-amber-400 to-orange-500"
                               style={{
                                 width: `${Math.max(strength * 100, 8)}%`,
                               }}
                             />
                           </span>
-                          <span className="text-xs font-medium text-fg-muted">
+                          <span className="num w-10 text-right text-xs font-bold text-fg">
+                            {Math.round(strength * 100)}%
+                          </span>
+                        </span>
+                        <span className="mt-3 flex flex-wrap items-center gap-1.5">
+                          <Badge tone="neutral" className="font-mono">
+                            {item.dtype}
+                          </Badge>
+                          <Badge tone="neutral" className="num">
+                            {formatInteger(item.n_unique)} unique
+                          </Badge>
+                          <span className="ml-auto text-xs font-semibold text-fg-subtle">
                             {strength > 0.66
                               ? "Strong match"
                               : strength > 0.33
@@ -541,26 +703,15 @@ export function TrainView() {
                                 : "Possible"}
                           </span>
                         </span>
-                        <span className="mt-2 block text-xs leading-relaxed text-fg-muted">
-                          {item.reasons.slice(0, 2).join(" · ")}
-                        </span>
-                        <span className="mt-3 flex flex-wrap gap-1.5">
-                          <Badge tone="neutral" className="font-mono">
-                            {item.dtype}
-                          </Badge>
-                          <Badge tone="neutral" className="num">
-                            {formatInteger(item.n_unique)} unique
-                          </Badge>
-                        </span>
                       </button>
                     );
                   })}
                 </div>
               )}
             </div>
-            <div className="h-fit rounded-xl border border-border bg-bg-alt p-4">
+            <div className="space-y-4">
               <Field
-                label="Or Choose Any Column"
+                label="Or Search Every Column"
                 labelId={targetLabelId}
                 hint={`${countLabel(overview.columns, "column")} available.`}
               >
@@ -574,12 +725,12 @@ export function TrainView() {
                   placeholder="Select a target column"
                 />
               </Field>
-              {target ? (
-                <p className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-success">
-                  <Target className="size-4" aria-hidden="true" />
-                  Predicting “{target}”
-                </p>
-              ) : null}
+              <TargetPreview
+                sessionId={sessionId}
+                dataVersion={versions.data}
+                target={target}
+                task={task}
+              />
             </div>
           </div>
           {mismatch ? (
@@ -659,6 +810,7 @@ export function TrainView() {
               onChange={setScaler}
               options={SCALERS}
             />
+            <ScalerExplainer scaler={scaler} />
           </Field>
         </div>
 
@@ -887,6 +1039,7 @@ export function TrainView() {
                     recommended={recommendedKeys.has(model.key)}
                     trained={trainedKeys.has(model.key)}
                     onToggle={() => toggleModel(model.key)}
+                    onDetails={() => setGuideModel(model)}
                   />
                 </li>
               ))}
@@ -931,6 +1084,32 @@ export function TrainView() {
           </Button>
         </div>
       </StepCard>
+
+      <ModelGuideSheet
+        model={guideModel}
+        onClose={() => setGuideModel(null)}
+        footer={
+          guideModel ? (
+            <Button
+              className="w-full"
+              variant={selected.has(guideModel.key) ? "secondary" : "primary"}
+              onClick={() => toggleModel(guideModel.key)}
+            >
+              {selected.has(guideModel.key) ? (
+                <>
+                  <X aria-hidden="true" />
+                  Remove From This Run
+                </>
+              ) : (
+                <>
+                  <Check aria-hidden="true" />
+                  Add to This Run
+                </>
+              )}
+            </Button>
+          ) : null
+        }
+      />
 
       <ConfirmDialog
         open={confirmReplace}

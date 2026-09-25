@@ -350,91 +350,13 @@ export function CleanView() {
         />
       </section>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_26rem] xl:items-start">
-        <Panel
-          title="Missing Values by Column"
-          description="Columns are sorted by how many values are missing."
-          icon={<CircleOff aria-hidden="true" />}
-        >
-          {missing.status === "error" && !missing.data ? (
-            <ErrorState
-              title="We Couldn't Check for Missing Values"
-              message={missing.error?.message ?? ""}
-              onRetry={missing.reload}
-            />
-          ) : !missing.data ? (
-            <LoadingBlock label="Checking every column for missing values…" />
-          ) : perColumn.length === 0 ? (
-            <EmptyState
-              compact
-              icon={<CircleCheck aria-hidden="true" />}
-              title="No Missing Values Found"
-              description="Every column in this dataset is complete. You can still remove duplicates or go straight to training."
-            />
-          ) : (
-            <TableContainer label="Missing values by column" maxHeight="30rem">
-              <table className="data-table">
-                <caption className="sr-only">
-                  Missing values in each column
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Column</th>
-                    <th scope="col">Type</th>
-                    <th scope="col" className="text-right">
-                      Missing
-                    </th>
-                    <th scope="col" className="w-[40%]">
-                      Share of Rows
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {perColumn.map(([column, info]) => {
-                    const level = severity(info.percentage);
-                    return (
-                      <tr key={column}>
-                        <td className="font-semibold text-fg">{column}</td>
-                        <td className="font-mono text-sm text-fg-muted">
-                          {info.dtype}
-                        </td>
-                        <td className="num text-right font-semibold text-danger">
-                          {formatInteger(info.count)}
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-3">
-                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-3">
-                              <div
-                                className={cn("h-full rounded-full", level.bar)}
-                                style={{
-                                  width: `${Math.max(info.percentage, 1.5)}%`,
-                                }}
-                              />
-                            </div>
-                            <Badge
-                              tone={level.tone}
-                              className="num w-16 justify-center"
-                            >
-                              {formatPercent(info.percentage)}
-                            </Badge>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </TableContainer>
-          )}
-        </Panel>
-
-        <Panel
-          title="Cleaning Options"
-          description="Choose how to handle gaps, then preview the result."
-          icon={<WandSparkles aria-hidden="true" />}
-          className="xl:sticky xl:top-24"
-        >
-          <div className="space-y-5">
+      <Panel
+        title="Cleaning Options"
+        description="Choose how to handle gaps, then preview the result."
+        icon={<WandSparkles aria-hidden="true" />}
+      >
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <Field label="Fill Missing Numbers" labelId={numericId}>
               <Select
                 aria-labelledby={numericId}
@@ -503,63 +425,140 @@ export function CleanView() {
                 options={ROW_THRESHOLDS}
               />
             </Field>
-            <div className="space-y-4 border-t border-border pt-5">
-              <SwitchField
-                label="Remove Duplicate Rows"
-                description={
-                  overview.duplicate_rows > 0
-                    ? `${countLabel(overview.duplicate_rows, "exact duplicate")} found in the current data.`
-                    : "No exact duplicates in the current data."
-                }
-                checked={options.drop_duplicates}
-                onChange={(checked) => update({ drop_duplicates: checked })}
-              />
-              <SwitchField
-                label="Treat Blank Text as Missing"
-                description="Counts values like “”, “N/A”, and “null” as missing."
-                checked={options.normalize_empty_strings}
-                onChange={(checked) =>
-                  update({ normalize_empty_strings: checked })
-                }
-              />
-            </div>
-
-            {previewIsCurrent && preview ? (
-              <div
-                className="rounded-xl border border-brand-line bg-brand-soft p-4"
-                aria-live="polite"
-              >
-                <p className="mb-3 text-sm font-semibold text-fg">
-                  Preview of Changes
-                </p>
-                <ImpactSummary impact={preview.impact} />
-              </div>
-            ) : null}
-
-            <div className="flex flex-col gap-2 sm:flex-row xl:flex-col 2xl:flex-row">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => void runPreview()}
-                loading={previewing && !confirmOpen}
-                loadingText="Previewing…"
-                disabled={previewIsCurrent}
-              >
-                <Eye aria-hidden="true" />
-                {previewIsCurrent ? "Preview Up to Date" : "Preview Changes"}
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={() => void openConfirm()}
-                disabled={previewing}
-              >
-                Apply Cleaning
-                <ArrowRight aria-hidden="true" />
-              </Button>
-            </div>
           </div>
-        </Panel>
-      </div>
+          <div className="grid grid-cols-1 gap-5 border-t border-border pt-5 md:grid-cols-2">
+            <SwitchField
+              label="Remove Duplicate Rows"
+              description={
+                overview.duplicate_rows > 0
+                  ? `${countLabel(overview.duplicate_rows, "exact duplicate")} found in the current data.`
+                  : "No exact duplicates in the current data."
+              }
+              checked={options.drop_duplicates}
+              onChange={(checked) => update({ drop_duplicates: checked })}
+            />
+            <SwitchField
+              label="Treat Blank Text as Missing"
+              description="Counts values like “”, “N/A”, and “null” as missing."
+              checked={options.normalize_empty_strings}
+              onChange={(checked) =>
+                update({ normalize_empty_strings: checked })
+              }
+            />
+          </div>
+
+          {previewIsCurrent && preview ? (
+            <div
+              className="rounded-xl border border-brand-line bg-brand-soft p-4"
+              aria-live="polite"
+            >
+              <p className="mb-3 text-sm font-semibold text-fg">
+                Preview of Changes
+              </p>
+              <ImpactSummary impact={preview.impact} />
+            </div>
+          ) : null}
+
+          <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+            <Button
+              variant="secondary"
+              className="sm:min-w-44"
+              onClick={() => void runPreview()}
+              loading={previewing && !confirmOpen}
+              loadingText="Previewing…"
+              disabled={previewIsCurrent}
+            >
+              <Eye aria-hidden="true" />
+              {previewIsCurrent ? "Preview Up to Date" : "Preview Changes"}
+            </Button>
+            <Button
+              className="sm:min-w-44"
+              onClick={() => void openConfirm()}
+              disabled={previewing}
+            >
+              Apply Cleaning
+              <ArrowRight aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel
+        title="Missing Values by Column"
+        description="Columns are sorted by how many values are missing."
+        icon={<CircleOff aria-hidden="true" />}
+      >
+        {missing.status === "error" && !missing.data ? (
+          <ErrorState
+            title="We Couldn't Check for Missing Values"
+            message={missing.error?.message ?? ""}
+            onRetry={missing.reload}
+          />
+        ) : !missing.data ? (
+          <LoadingBlock label="Checking every column for missing values…" />
+        ) : perColumn.length === 0 ? (
+          <EmptyState
+            compact
+            icon={<CircleCheck aria-hidden="true" />}
+            title="No Missing Values Found"
+            description="Every column in this dataset is complete. You can still remove duplicates or go straight to training."
+          />
+        ) : (
+          <TableContainer label="Missing values by column" maxHeight="30rem">
+            <table className="data-table">
+              <caption className="sr-only">
+                Missing values in each column
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Column</th>
+                  <th scope="col">Type</th>
+                  <th scope="col" className="text-right">
+                    Missing
+                  </th>
+                  <th scope="col" className="w-[40%]">
+                    Share of Rows
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {perColumn.map(([column, info]) => {
+                  const level = severity(info.percentage);
+                  return (
+                    <tr key={column}>
+                      <td className="font-semibold text-fg">{column}</td>
+                      <td className="font-mono text-sm text-fg-muted">
+                        {info.dtype}
+                      </td>
+                      <td className="num text-right font-semibold text-danger">
+                        {formatInteger(info.count)}
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-3">
+                            <div
+                              className={cn("h-full rounded-full", level.bar)}
+                              style={{
+                                width: `${Math.max(info.percentage, 1.5)}%`,
+                              }}
+                            />
+                          </div>
+                          <Badge
+                            tone={level.tone}
+                            className="num w-16 justify-center"
+                          >
+                            {formatPercent(info.percentage)}
+                          </Badge>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </TableContainer>
+        )}
+      </Panel>
 
       <NextStep
         href="/app/train"

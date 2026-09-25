@@ -80,7 +80,7 @@ export function HeroPreview() {
                     <span className="inline-flex items-center justify-end gap-2">
                       <span className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-surface-3 sm:inline-block">
                         <span
-                          className="block h-full rounded-full bg-linear-to-r from-indigo-500 to-violet-500"
+                          className="block h-full rounded-full bg-linear-to-r from-amber-400 to-orange-500"
                           style={{ width: `${row.accuracy}%` }}
                         />
                       </span>

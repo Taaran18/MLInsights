@@ -153,14 +153,14 @@ export const TASK_LABELS: Record<TaskType, string> = {
 };
 
 export const CHART_COLORS = [
-  "#6366f1",
+  "#f97316",
+  "#0ea5e9",
   "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#06b6d4",
-  "#a855f7",
+  "#f43f5e",
+  "#eab308",
+  "#8b5cf6",
+  "#14b8a6",
   "#ec4899",
   "#84cc16",
-  "#f97316",
-  "#14b8a6",
+  "#6366f1",
 ];

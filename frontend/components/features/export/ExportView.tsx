@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import {
+  Archive,
   CircleAlert,
   CircleCheck,
   Download,
@@ -141,6 +142,121 @@ function ExportCard({
   );
 }
 
+function BundleCard({
+  sessionId,
+  base,
+  format,
+  trainedModels,
+}: {
+  sessionId: string;
+  base: string;
+  format: "csv" | "xlsx";
+  trainedModels: number;
+}) {
+  const { state, run } = useDownload();
+  const filename = `${base}_mlinsights.zip`;
+  const items = [
+    { label: "PDF report", file: `${base}_report.pdf` },
+    { label: "Dataset", file: `${base}_cleaned.${format}` },
+    { label: "Session metadata", file: `${base}_meta.json` },
+    {
+      label:
+        trainedModels > 0
+          ? `${trainedModels} trained ${trainedModels === 1 ? "model" : "models"}`
+          : "Trained models (none yet)",
+      file: trainedModels > 0 ? "models/ + manifest.json" : "Skipped",
+    },
+  ];
+  return (
+    <section
+      aria-labelledby="bundle-title"
+      className="relative overflow-hidden rounded-3xl border border-orange-500/30 bg-linear-to-br from-orange-500/[0.16] via-surface to-surface p-6 shadow-card sm:p-8"
+    >
+      <span
+        className="pointer-events-none absolute -top-24 -right-20 size-72 rounded-full bg-orange-500/20 blur-3xl"
+        aria-hidden="true"
+      />
+      <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+        <div>
+          <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-linear-to-br from-amber-400 via-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30">
+            <Archive className="size-6" aria-hidden="true" />
+          </span>
+          <h2
+            id="bundle-title"
+            className="mt-5 text-2xl font-extrabold tracking-tight text-fg sm:text-3xl"
+          >
+            Download Everything
+          </h2>
+          <p className="mt-2 max-w-lg text-fg-muted">
+            All four exports in a single ZIP file, so you can save or share your
+            whole analysis in one go.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button
+              size="lg"
+              variant={state.status === "done" ? "secondary" : "primary"}
+              loading={state.status === "busy"}
+              loadingText="Packing Your ZIP…"
+              onClick={() =>
+                void run(reportPaths.bundle(sessionId, format), filename)
+              }
+            >
+              {state.status === "done" ? (
+                <>
+                  <CircleCheck className="text-success" aria-hidden="true" />
+                  Downloaded · {formatBytes(state.size)}
+                </>
+              ) : (
+                <>
+                  <Download aria-hidden="true" />
+                  Download All as ZIP
+                </>
+              )}
+            </Button>
+            <span className="truncate font-mono text-xs text-fg-subtle">
+              {filename}
+            </span>
+          </div>
+          {state.status === "error" ? (
+            <p
+              role="alert"
+              className="mt-3 flex items-start gap-1.5 text-sm text-danger"
+            >
+              <CircleAlert
+                className="mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
+              {state.message}
+            </p>
+          ) : null}
+        </div>
+        <ul className="space-y-2.5">
+          {items.map((item) => (
+            <li
+              key={item.label}
+              className="flex items-center gap-3 rounded-xl border border-border bg-surface/80 px-4 py-3"
+            >
+              <CircleCheck
+                className={cn(
+                  "size-5 shrink-0",
+                  item.file === "Skipped" ? "text-fg-subtle" : "text-success",
+                )}
+                aria-hidden="true"
+              />
+              <span className="min-w-0 flex-1 text-sm font-semibold text-fg">
+                {item.label}
+              </span>
+              <span className="truncate font-mono text-xs text-fg-subtle">
+                {item.file}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 export function ExportView() {
   const { sessionId, filename, overview } = useReadySession();
   const base = stripExtension(filename);
@@ -165,6 +281,21 @@ export function ExportView() {
         Sessions expire {SESSION_TTL_HOURS} hours after upload, so exports
         won&apos;t be available after that.
       </Callout>
+
+      <BundleCard
+        sessionId={sessionId}
+        base={base}
+        format={format}
+        trainedModels={overview.trained_models}
+      />
+
+      <div className="flex items-center gap-4" aria-hidden="true">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-sm font-semibold text-fg-subtle">
+          Or Download Individually
+        </span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
 
       <section
         aria-label="Downloads"

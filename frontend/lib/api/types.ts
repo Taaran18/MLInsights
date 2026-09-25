@@ -66,6 +66,36 @@ export interface MissingResponse {
   per_column: Record<string, ColumnMissing>;
 }
 
+export interface ColumnProfile {
+  name: string;
+  kind: "number" | "text" | "date" | "boolean";
+  dtype: string;
+  missing: number;
+  missing_percentage: number;
+  unique: number;
+  min?: number;
+  max?: number;
+  mean?: number;
+  median?: number;
+  histogram?: number[];
+  bin_edges?: number[];
+  top_values?: { value: string; count: number }[];
+}
+
+export interface ProfileResponse {
+  rows: number;
+  columns: number;
+  truncated: boolean;
+  quality: {
+    score: number;
+    completeness: number;
+    uniqueness: number;
+    consistency: number;
+    constant_columns: number;
+  };
+  profiles: ColumnProfile[];
+}
+
 export interface CorrelationResponse {
   correlation: Record<string, Record<string, number | null>>;
 }

@@ -19,10 +19,16 @@ import {
   Columns3,
 } from "lucide-react";
 import { NextStep } from "@/components/app/AppChrome";
+import { ColumnProfiles } from "@/components/features/insights/ColumnProfiles";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { Segmented, TabPanel, Tabs } from "@/components/ui/Controls";
 import { EmptyState, ErrorState, LoadingBlock } from "@/components/ui/Feedback";
-import { PageHeader, StatCard, TableContainer } from "@/components/ui/Layout";
+import {
+  PageHeader,
+  StatCard,
+  TableContainer,
+  type Accent,
+} from "@/components/ui/Layout";
 import { Select } from "@/components/ui/Select";
 import { api } from "@/lib/api/endpoints";
 import type { Cell, Overview } from "@/lib/api/types";
@@ -112,7 +118,7 @@ function Composition({ overview }: { overview: Overview }) {
   const other = Math.max(0, overview.columns - numeric - text - dates);
   const parts = [
     { label: "Number", count: numeric, className: "bg-sky-500" },
-    { label: "Text", count: text, className: "bg-indigo-500" },
+    { label: "Text", count: text, className: "bg-orange-500" },
     { label: "Date", count: dates, className: "bg-emerald-500" },
     { label: "Other", count: other, className: "bg-zinc-400" },
   ].filter((part) => part.count > 0);
@@ -474,8 +480,8 @@ function correlationColor(value: number | null): {
   const alpha = Math.min(Math.abs(value), 1);
   const background =
     value >= 0
-      ? `rgb(99 102 241 / ${0.08 + alpha * 0.82})`
-      : `rgb(239 68 68 / ${0.08 + alpha * 0.8})`;
+      ? `rgb(249 115 22 / ${0.08 + alpha * 0.82})`
+      : `rgb(14 165 233 / ${0.08 + alpha * 0.8})`;
   return { background, color: alpha > 0.5 ? "#ffffff" : "var(--fg)" };
 }
 
@@ -522,15 +528,24 @@ function CorrelationPanel({
         const strongest = pairs
           .sort((x, y) => Math.abs(y.value) - Math.abs(x.value))
           .slice(0, 8);
+        const count = columns.length;
+        const cell =
+          count <= 4 ? 5.5 : count <= 7 ? 4.5 : count <= 11 ? 3.5 : 2.85;
+        const vertical = count > 6;
         return (
-          <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1fr)_24rem]">
-            <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+            <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-surface p-4 shadow-card sm:p-6">
               <TableContainer
                 label="Correlation heatmap"
-                maxHeight="36rem"
-                className="p-3"
+                maxHeight="40rem"
+                className="w-auto max-w-full border-0 bg-transparent shadow-none"
               >
-                <table className="border-separate border-spacing-1 text-xs">
+                <table
+                  className={cn(
+                    "mx-auto border-separate border-spacing-1.5",
+                    count <= 7 ? "text-sm" : "text-xs",
+                  )}
+                >
                   <caption className="sr-only">
                     Pearson correlation between numeric columns
                   </caption>
@@ -543,10 +558,19 @@ function CorrelationPanel({
                         <th
                           key={column}
                           scope="col"
-                          className="h-28 max-w-12 px-1 align-bottom font-semibold text-fg-muted"
+                          className={cn(
+                            "px-1 align-bottom font-semibold text-fg-muted",
+                            vertical ? "h-28" : "pb-1",
+                          )}
+                          style={{ maxWidth: `${cell}rem` }}
                         >
                           <span
-                            className="mx-auto block max-h-28 rotate-180 truncate [writing-mode:vertical-rl]"
+                            className={cn(
+                              "mx-auto block",
+                              vertical
+                                ? "max-h-28 rotate-180 truncate [writing-mode:vertical-rl]"
+                                : "line-clamp-2 [overflow-wrap:anywhere]",
+                            )}
                             title={column}
                           >
                             {column}
@@ -560,7 +584,7 @@ function CorrelationPanel({
                       <tr key={row}>
                         <th
                           scope="row"
-                          className="max-w-40 truncate pr-2 text-right font-semibold text-fg-muted"
+                          className="max-w-44 truncate pr-3 text-right font-semibold text-fg-muted"
                           title={row}
                         >
                           {row}
@@ -571,8 +595,13 @@ function CorrelationPanel({
                           return (
                             <td
                               key={column}
-                              className="num size-12 min-w-12 rounded-md text-center font-semibold"
-                              style={style}
+                              className="num rounded-lg text-center font-semibold transition-transform hover:scale-105"
+                              style={{
+                                ...style,
+                                width: `${cell}rem`,
+                                minWidth: `${cell}rem`,
+                                height: `${cell}rem`,
+                              }}
                               title={`${row} and ${column}: ${value === null ? "not available" : value.toFixed(3)}`}
                             >
                               {value === null ? "—" : value.toFixed(2)}
@@ -584,17 +613,28 @@ function CorrelationPanel({
                   </tbody>
                 </table>
               </TableContainer>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-fg-muted">
+              <div
+                className="flex w-full max-w-md flex-col gap-1.5"
+                aria-hidden="true"
+              >
+                <div className="h-2.5 rounded-full bg-[linear-gradient(90deg,rgb(14_165_233),rgb(14_165_233/0.15),var(--surface-2),rgb(249_115_22/0.15),rgb(249_115_22))]" />
+                <div className="num flex justify-between text-[11px] font-medium text-fg-subtle">
+                  <span>−1</span>
+                  <span>0</span>
+                  <span>+1</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-fg-muted">
                 <span className="inline-flex items-center gap-2">
                   <span
-                    className="size-3 rounded bg-indigo-500"
+                    className="size-3 rounded bg-orange-500"
                     aria-hidden="true"
                   />{" "}
                   Positive: both rise together
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span
-                    className="size-3 rounded bg-red-500"
+                    className="size-3 rounded bg-sky-500"
                     aria-hidden="true"
                   />{" "}
                   Negative: one rises as the other falls
@@ -639,7 +679,7 @@ function CorrelationPanel({
                       <div
                         className={cn(
                           "h-full rounded-full",
-                          pair.value >= 0 ? "bg-indigo-500" : "bg-red-500",
+                          pair.value >= 0 ? "bg-orange-500" : "bg-sky-500",
                         )}
                         style={{ width: `${Math.abs(pair.value) * 100}%` }}
                       />
@@ -764,7 +804,7 @@ function ValueCountsPanel({
                               "block h-full rounded-full",
                               item.value === null
                                 ? "bg-red-500"
-                                : "bg-linear-to-r from-indigo-500 to-violet-500",
+                                : "bg-linear-to-r from-amber-400 to-orange-500",
                             )}
                             style={{ width: `${(item.count / max) * 100}%` }}
                           />
@@ -813,6 +853,7 @@ export function InsightsView() {
     hint?: string;
     icon: React.ReactNode;
     tone: Tone;
+    accent: Accent;
   }[] = [
     {
       label: "Rows",
@@ -820,6 +861,7 @@ export function InsightsView() {
       hint: formatInteger(overview.rows) + " records",
       icon: <Rows3 />,
       tone: "brand",
+      accent: "orange",
     },
     {
       label: "Columns",
@@ -827,6 +869,7 @@ export function InsightsView() {
       hint: "Attributes per record",
       icon: <Columns3 />,
       tone: "brand",
+      accent: "violet",
     },
     {
       label: "Number Columns",
@@ -834,6 +877,7 @@ export function InsightsView() {
       hint: "Integers and decimals",
       icon: <Hash />,
       tone: "info",
+      accent: "sky",
     },
     {
       label: "Text Columns",
@@ -841,6 +885,7 @@ export function InsightsView() {
       hint: "Labels and categories",
       icon: <Type />,
       tone: "brand",
+      accent: "rose",
     },
     {
       label: "Missing Cells",
@@ -848,6 +893,7 @@ export function InsightsView() {
       hint: `${formatPercent(overview.total_missing_percentage)} of all cells`,
       icon: <CircleOff />,
       tone: overview.total_missing > 0 ? "danger" : "success",
+      accent: overview.total_missing > 0 ? "rose" : "emerald",
     },
     {
       label: "Duplicate Rows",
@@ -858,6 +904,7 @@ export function InsightsView() {
           : "No exact duplicates",
       icon: <Copy />,
       tone: overview.duplicate_rows > 0 ? "warning" : "success",
+      accent: overview.duplicate_rows > 0 ? "amber" : "emerald",
     },
     {
       label: "Date Columns",
@@ -865,6 +912,7 @@ export function InsightsView() {
       hint: "Parsed as dates",
       icon: <CalendarDays />,
       tone: "success",
+      accent: "teal",
     },
     {
       label: "Memory Size",
@@ -872,6 +920,7 @@ export function InsightsView() {
       hint: "In-memory footprint",
       icon: <HardDrive />,
       tone: "neutral",
+      accent: "slate",
     },
   ];
 
@@ -930,6 +979,7 @@ export function InsightsView() {
             hint={stat.hint}
             icon={stat.icon}
             tone={stat.tone}
+            accent={stat.accent}
           />
         ))}
       </section>
@@ -969,6 +1019,8 @@ export function InsightsView() {
           ) : null}
         </TabPanel>
       </section>
+
+      <ColumnProfiles sessionId={sessionId} dataVersion={versions.data} />
 
       <NextStep
         href="/app/clean"
