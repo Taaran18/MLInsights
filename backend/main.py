@@ -13,7 +13,7 @@ load_dotenv()
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from routers import cleaning, insights, models, report, sessions, training, upload
 from utils.session_store import SESSION_TTL_SECONDS, prune_expired_sessions, store_dir
@@ -82,6 +82,7 @@ async def request_context(request: Request, call_next):
             content={"detail": "Something went wrong on our side. Please try again in a moment."},
         )
     response.headers["X-Request-ID"] = request_id
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
     logger.info(
         "request request_id=%s method=%s path=%s status=%s duration_ms=%.0f",
         request_id,
@@ -116,6 +117,11 @@ app.include_router(report.router, prefix="/api/report", tags=["Report"])
 @app.get("/")
 def root():
     return {"message": "MLInsights API is running", "docs": "/docs"}
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots():
+    return PlainTextResponse("User-agent: *\nDisallow: /\n")
 
 
 @app.get("/health")
