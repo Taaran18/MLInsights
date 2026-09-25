@@ -46,14 +46,20 @@ node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a
   fail "Node.js 20.9 or newer is required. You have $(node -v)."
 
 PYTHON=""
-for candidate in python3.11 python3.12 python3.13 python3; do
+for candidate in python3.12 python3; do
   if command -v "$candidate" >/dev/null 2>&1 &&
-    "$candidate" -c 'import sys;sys.exit(0 if sys.version_info>=(3,11) else 1)' 2>/dev/null; then
+    "$candidate" -c 'import sys;sys.exit(0 if sys.version_info[:2]==(3,12) else 1)' 2>/dev/null; then
     PYTHON="$candidate"
     break
   fi
 done
-[ -n "$PYTHON" ] || fail "Python 3.11 or newer is required. Install it from https://www.python.org/downloads/"
+[ -n "$PYTHON" ] || fail "Python 3.12 is required (3.12.10 recommended). Install it from https://www.python.org/downloads/"
+
+if [ -x "$BACKEND/.venv/bin/python" ] &&
+  ! "$BACKEND/.venv/bin/python" -c 'import sys;sys.exit(0 if sys.version_info[:2]==(3,12) else 1)' 2>/dev/null; then
+  info "Rebuilding the backend virtual environment with Python 3.12"
+  rm -rf "$BACKEND/.venv"
+fi
 
 if [ ! -x "$BACKEND/.venv/bin/python" ]; then
   info "Creating the backend virtual environment with $PYTHON"

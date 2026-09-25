@@ -22,24 +22,27 @@ if errorlevel 1 (
 set "PYTHON="
 where py >nul 2>nul
 if not errorlevel 1 (
-  py -3.11 -c "import sys" >nul 2>nul
-  if not errorlevel 1 (
-    set "PYTHON=py -3.11"
-  ) else (
-    py -3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" >nul 2>nul
-    if not errorlevel 1 set "PYTHON=py -3"
-  )
+  py -3.12 -c "import sys" >nul 2>nul
+  if not errorlevel 1 set "PYTHON=py -3.12"
 )
 if not defined PYTHON (
   where python >nul 2>nul
   if not errorlevel 1 (
-    python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" >nul 2>nul
+    python -c "import sys; sys.exit(0 if sys.version_info[:2] == (3, 12) else 1)" >nul 2>nul
     if not errorlevel 1 set "PYTHON=python"
   )
 )
 if not defined PYTHON (
-  echo [x] Python 3.11 or newer is required. Install it from https://www.python.org/downloads/
+  echo [x] Python 3.12 is required ^(3.12.10 recommended^). Install it from https://www.python.org/downloads/
   exit /b 1
+)
+
+if exist "%BACKEND%\.venv\Scripts\python.exe" (
+  "%BACKEND%\.venv\Scripts\python.exe" -c "import sys; sys.exit(0 if sys.version_info[:2] == (3, 12) else 1)" >nul 2>nul
+  if errorlevel 1 (
+    echo [-] Rebuilding the backend virtual environment with Python 3.12
+    rmdir /s /q "%BACKEND%\.venv"
+  )
 )
 
 if not exist "%BACKEND%\.venv\Scripts\python.exe" (
